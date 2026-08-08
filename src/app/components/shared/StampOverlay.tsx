@@ -1,7 +1,5 @@
 import { useEffect } from "react";
 import { motion } from "motion/react";
-
-import { motion } from "motion/react";
 import type { Verdict } from "../../types";
 
 export const STAMP_PALETTE: Record<string, { bg: string; color: string }> = {

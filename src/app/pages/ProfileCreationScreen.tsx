@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 
 import type { PlayerProfile } from "../types";
 import { AvatarTile } from "../components/profile/AvatarTile";
+import { saveProfile } from "../lib/storage";
 
 export function ProfileCreationScreen({ onSave }: { onSave: (p: PlayerProfile) => void }) {
   const [name, setName]       = useState("");
