@@ -1,4 +1,5 @@
 import type { CaseRecord } from "../types";
+import { CASES_CATALOG } from "../data/casesData";
 
 export const WALL_NODE_POSITIONS = [
   { x: 12, y: 12, color: "#c9a227" },

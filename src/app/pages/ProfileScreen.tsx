@@ -1,4 +1,5 @@
 import type { PlayerProfile } from "../types";
+import { AvatarTile } from "../components/profile/AvatarTile";
 
 export function ProfileScreen({ profile, onBack }: { profile: PlayerProfile | null; onBack?: () => void }) {
   if (!profile) return null;

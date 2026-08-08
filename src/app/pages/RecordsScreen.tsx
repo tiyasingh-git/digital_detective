@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 export const RECORDS_CATALOG = [
   {
     id: "techniques", title: "Investigation Techniques", color: "#00e9ff",

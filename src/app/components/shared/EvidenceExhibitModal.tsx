@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 
 import { MiraPopup } from "./Mira";
+import { EVIDENCE_DATA } from "../../data/investigationData";
 
 export const EVIDENCE_EXHIBITS: Record<number, {
   type: string; title: string; body: React.ReactNode; marginNote?: string; mentorNote?: string;

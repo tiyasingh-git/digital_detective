@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 
 import type { PlayerProfile, SettingsState } from "../types";
 import { ToggleSwitch, SegmentedControl, SettingsSection, SettingsRow } from "../components/shared/SettingsControls";
+import { saveSettings } from "../lib/storage";
 
 export function SettingsScreen({ onBack, profile, settings, onSettingsChange }: {
   onBack: () => void;

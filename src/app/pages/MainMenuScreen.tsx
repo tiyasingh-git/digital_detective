@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "motion/react";
 
-import type { Screen, CaseRecord, PlayerProfile, SettingsState } from "../types";
+import type { Screen, CaseRecord, PlayerProfile, SettingsState, CaseStatus } from "../types";
 import { MenuAnimatedBg } from "../components/mainmenu/MenuAnimatedBg";
 import { VERDICTS } from "../data/investigationData";
 import { CASES_CATALOG } from "../data/casesData";

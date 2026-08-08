@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 
 import { MiraPopup } from "../components/shared/Mira";
+import { Grain, ScanLines, Vignette } from "../components/Atmosphere";
 
 export const MIRA_ONBOARDING_MSG = "Welcome, Detective. Before we send you into the field, there's one rule every Digital Guardian must remember. Information is powerful. Used responsibly, it can save lives. Used carelessly, it can create fear, confusion, and harm. During every mission, you'll investigate clues, analyze evidence, and make a final decision. There are no trick questions. Only careful observation.";
 

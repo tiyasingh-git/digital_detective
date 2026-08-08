@@ -1,4 +1,6 @@
-import type { CaseRecord } from "../types";
+import { useState } from "react";
+
+import type { CaseRecord, CaseStatus } from "../types";
 import { CASES_CATALOG } from "../data/casesData";
 
 export function CaseSelectScreen({
