@@ -18,6 +18,7 @@ import { MainMenuScreen } from "./pages/MainMenuScreen";
 import { CaseSelectScreen } from "./pages/CaseSelectScreen";
 import { MissionBriefingScreen } from "./pages/MissionBriefingScreen";
 import { InvestigationScreen } from "./pages/InvestigationScreen";
+import { Case2Screen } from "./pages/Case2Screen";
 import { NotebookScreen } from "./pages/NotebookScreen";
 import { EvidenceWallScreen } from "./pages/EvidenceWallScreen";
 import { CaseResolutionScreen } from "./pages/CaseResolutionScreen";
@@ -241,7 +242,17 @@ export default function App() {
             )}
             {screen === "records"         && <RecordsScreen onBack={handleBackToMenu} />}
             {screen === "settings"        && <SettingsScreen onBack={handleBackToMenu} profile={profile} settings={settings} onSettingsChange={setSettings} />}
-            {screen === "investigation"   && <InvestigationScreen onVerdictFinal={handleVerdictFinal} onDiscoverFinding={handleDiscoverFinding} />}
+            {screen === "investigation" &&
+  (activeCaseId === "2024-0891" ? (
+    <Case2Screen
+      onVerdictFinal={handleVerdictFinal}
+    />
+  ) : (
+    <InvestigationScreen
+      onVerdictFinal={handleVerdictFinal}
+      onDiscoverFinding={handleDiscoverFinding}
+    />
+  ))}
             {screen === "notebook"        && <NotebookScreen cases={cases} onUpdateNotes={handleUpdateNotebookNotes} onBack={handleBackToMenu} />}
             {screen === "profile"         && <ProfileScreen profile={profile} onBack={handleBackToMenu} />}
             {screen === "evidence-wall"   && <EvidenceWallScreen cases={cases} />}
