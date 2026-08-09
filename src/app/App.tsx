@@ -40,15 +40,9 @@ import { InvestigationScreen } from "./pages/InvestigationScreen";
 
 import { Case2Screen } from "./pages/Case2Screen";
 
-/*
- * Case 3 uses a DEFAULT export.
- */
 import Case3Screen from "./pages/Case3Screen";
-
-/*
- * Case 4 uses a DEFAULT export.
- */
 import Case4Screen from "./pages/Case4Screen";
+import Case5Screen from "./pages/Case5Screen";
 
 import { NotebookScreen } from "./pages/NotebookScreen";
 import { EvidenceWallScreen } from "./pages/EvidenceWallScreen";
@@ -57,9 +51,9 @@ import { RecordsScreen } from "./pages/RecordsScreen";
 import { SettingsScreen } from "./pages/SettingsScreen";
 
 
-// ============================================================
-// HEADER SCREENS
-// ============================================================
+/* =========================================================
+   HEADER NAVIGATION
+========================================================= */
 
 export const SCREENS: {
   id: Screen;
@@ -72,9 +66,9 @@ export const SCREENS: {
 ];
 
 
-// ============================================================
-// PRE-GAME SCREENS
-// ============================================================
+/* =========================================================
+   PRE-GAME SCREENS
+========================================================= */
 
 export const PRE_GAME: Screen[] = [
   "boot",
@@ -91,24 +85,44 @@ export const PRE_GAME: Screen[] = [
 ];
 
 
-// ============================================================
-// APP
-// ============================================================
-
 export default function App() {
+  /* =======================================================
+     SCREEN
+  ======================================================= */
+
   const [screen, setScreen] =
     useState<Screen>("boot");
 
+
+  /* =======================================================
+     PENDING CASE
+  ======================================================= */
+
   const [pendingCaseId, setPendingCaseId] =
     useState<string | null>(null);
+
+
+  /* =======================================================
+     PROFILE
+  ======================================================= */
 
   const [profile, setProfile] =
     useState<PlayerProfile | null>(
       () => loadProfile()
     );
 
+
+  /* =======================================================
+     CASES
+  ======================================================= */
+
   const [cases, setCases] =
     useState<CaseRecord[]>(loadCases);
+
+
+  /* =======================================================
+     ACTIVE CASE
+  ======================================================= */
 
   const [activeCaseId, setActiveCaseId] =
     useState<string | null>(() => {
@@ -116,20 +130,34 @@ export default function App() {
 
       return (
         stored.find(
-          (c) => c.status === "in-progress"
+          (record) =>
+            record.status === "in-progress"
         )?.caseId ?? null
       );
     });
 
+
+  /* =======================================================
+     FINAL VERDICT
+  ======================================================= */
+
   const [finalVerdict, setFinalVerdict] =
-    useState<NonNullable<Verdict> | null>(
-      null
-    );
+    useState<NonNullable<Verdict> | null>(null);
+
+
+  /* =======================================================
+     RESOLUTION EVIDENCE
+  ======================================================= */
 
   const [
     resolutionInvestigated,
     setResolutionInvestigated,
   ] = useState<string[]>([]);
+
+
+  /* =======================================================
+     SETTINGS
+  ======================================================= */
 
   const [settings, setSettings] =
     useState<SettingsState>(
@@ -137,22 +165,23 @@ export default function App() {
     );
 
 
-  // ==========================================================
-  // ACTIVE CASE
-  // ==========================================================
+  /* =========================================================
+     ACTIVE CASE RECORD
+  ========================================================= */
 
   const activeCase =
     activeCaseId
       ? cases.find(
-          (c) =>
-            c.caseId === activeCaseId
+          (record) =>
+            record.caseId ===
+            activeCaseId
         ) ?? null
       : null;
 
 
-  // ==========================================================
-  // UPDATE CASE
-  // ==========================================================
+  /* =========================================================
+     UPDATE CASE
+  ========================================================= */
 
   const updateCase =
     useCallback(
@@ -163,12 +192,13 @@ export default function App() {
         ) => CaseRecord
       ) => {
         setCases((previous) => {
-          const next = previous.map(
-            (record) =>
-              record.caseId === caseId
-                ? updater(record)
-                : record
-          );
+          const next =
+            previous.map(
+              (record) =>
+                record.caseId === caseId
+                  ? updater(record)
+                  : record
+            );
 
           saveCases(next);
 
@@ -179,9 +209,9 @@ export default function App() {
     );
 
 
-  // ==========================================================
-  // SAVE LAST SCREEN
-  // ==========================================================
+  /* =========================================================
+     SAVE LAST SCREEN
+  ========================================================= */
 
   useEffect(() => {
     if (
@@ -204,9 +234,9 @@ export default function App() {
   ]);
 
 
-  // ==========================================================
-  // TIMER
-  // ==========================================================
+  /* =========================================================
+     CASE TIMER
+  ========================================================= */
 
   useEffect(() => {
     if (
@@ -254,9 +284,9 @@ export default function App() {
   ]);
 
 
-  // ==========================================================
-  // SPLASH
-  // ==========================================================
+  /* =========================================================
+     SPLASH
+  ========================================================= */
 
   const handleSplashDone =
     useCallback(() => {
@@ -271,14 +301,15 @@ export default function App() {
     }, []);
 
 
-  // ==========================================================
-  // PROFILE
-  // ==========================================================
+  /* =========================================================
+     PROFILE SAVE
+  ========================================================= */
 
   const handleProfileSave =
     useCallback(
       (player: PlayerProfile) => {
         setProfile(player);
+
         setScreen(
           "mira-onboarding"
         );
@@ -287,9 +318,9 @@ export default function App() {
     );
 
 
-  // ==========================================================
-  // CASE SELECT
-  // ==========================================================
+  /* =========================================================
+     CASE SELECT
+  ========================================================= */
 
   const handleCaseSelect =
     useCallback(
@@ -319,7 +350,8 @@ export default function App() {
 
               finalVerdict: null,
 
-              discoveredFindings: [],
+              discoveredFindings:
+                [],
             })
           );
         }
@@ -327,16 +359,13 @@ export default function App() {
         const storedCase =
           cases.find(
             (record) =>
-              record.caseId === caseId
+              record.caseId ===
+              caseId
           );
 
         const storedScreen =
           storedCase?.lastScreen;
 
-        /*
-         * Case 2, Case 3 and Case 4 all use
-         * the investigation screen internally.
-         */
         const validResumeScreens =
           new Set<Screen>([
             "investigation",
@@ -360,9 +389,9 @@ export default function App() {
     );
 
 
-  // ==========================================================
-  // FINAL VERDICT
-  // ==========================================================
+  /* =========================================================
+     FINAL VERDICT
+  ========================================================= */
 
   const handleVerdictFinal =
     useCallback(
@@ -407,9 +436,9 @@ export default function App() {
     );
 
 
-  // ==========================================================
-  // BACK TO BUREAU
-  // ==========================================================
+  /* =========================================================
+     BACK TO BUREAU
+  ========================================================= */
 
   const handleBackToBureau =
     useCallback(() => {
@@ -436,9 +465,9 @@ export default function App() {
     }, [activeCaseId]);
 
 
-  // ==========================================================
-  // BACK TO MENU
-  // ==========================================================
+  /* =========================================================
+     BACK TO MENU
+  ========================================================= */
 
   const handleBackToMenu =
     useCallback(() => {
@@ -446,9 +475,9 @@ export default function App() {
     }, []);
 
 
-  // ==========================================================
-  // NOTEBOOK
-  // ==========================================================
+  /* =========================================================
+     NOTEBOOK
+  ========================================================= */
 
   const handleUpdateNotebookNotes =
     useCallback(
@@ -460,7 +489,8 @@ export default function App() {
           caseId,
           (record) => ({
             ...record,
-            notebookNotes: notes,
+            notebookNotes:
+              notes,
           })
         );
       },
@@ -468,9 +498,9 @@ export default function App() {
     );
 
 
-  // ==========================================================
-  // DISCOVER FINDING
-  // ==========================================================
+  /* =========================================================
+     DISCOVER FINDING
+  ========================================================= */
 
   const handleDiscoverFinding =
     useCallback(
@@ -521,9 +551,9 @@ export default function App() {
     );
 
 
-  // ==========================================================
-  // UI FLAGS
-  // ==========================================================
+  /* =========================================================
+     UI FLAGS
+  ========================================================= */
 
   const isPreGame =
     PRE_GAME.includes(screen);
@@ -531,9 +561,9 @@ export default function App() {
   const isCritical = false;
 
 
-  // ==========================================================
-  // RENDER
-  // ==========================================================
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
     <div
@@ -557,9 +587,9 @@ export default function App() {
       <Vignette />
 
 
-      {/* ====================================================
+      {/* =====================================================
           HEADER
-      ==================================================== */}
+      ===================================================== */}
 
       {!isPreGame &&
         screen !==
@@ -660,7 +690,6 @@ export default function App() {
               >
                 ← BUREAU
               </button>
-
             )}
 
             <div
@@ -720,7 +749,6 @@ export default function App() {
               </div>
 
             </div>
-
           </div>
 
 
@@ -854,9 +882,9 @@ export default function App() {
       )}
 
 
-      {/* ====================================================
+      {/* =====================================================
           MAIN
-      ==================================================== */}
+      ===================================================== */}
 
       <main
         className="flex-1 overflow-hidden relative"
@@ -1125,7 +1153,6 @@ export default function App() {
 
             {/* =================================================
                 CASE 2
-                2024-0891
             ================================================= */}
 
             {screen ===
@@ -1144,7 +1171,6 @@ export default function App() {
 
             {/* =================================================
                 CASE 3
-                2023-1204
             ================================================= */}
 
             {screen ===
@@ -1159,7 +1185,6 @@ export default function App() {
 
             {/* =================================================
                 CASE 4
-                2024-1389
             ================================================= */}
 
             {screen ===
@@ -1177,7 +1202,25 @@ export default function App() {
 
 
             {/* =================================================
-                DEFAULT / GENERIC INVESTIGATION
+                CASE 5
+            ================================================= */}
+
+            {screen ===
+              "investigation" &&
+              activeCaseId ===
+                "2024-1501" && (
+
+              <Case5Screen
+                onVerdictFinal={
+                  handleVerdictFinal
+                }
+              />
+
+            )}
+
+
+            {/* =================================================
+                OTHER CASES
             ================================================= */}
 
             {screen ===
@@ -1187,7 +1230,9 @@ export default function App() {
               activeCaseId !==
                 "2023-1204" &&
               activeCaseId !==
-                "2024-1389" && (
+                "2024-1389" &&
+              activeCaseId !==
+                "2024-1501" && (
 
               <InvestigationScreen
                 onVerdictFinal={
