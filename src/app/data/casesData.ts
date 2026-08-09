@@ -20,10 +20,11 @@ export const CASES_CATALOG = [
       "A viral headline claims every school has been banned indefinitely. The truth is buried beyond the first sentence.",
   },
   {
-    caseId: "2024-1389",
-    title: "CLASSIFIED",
-    teaser: null,
-  },
+  caseId: "2024-1389",
+  title: "THE PERFECT FAKE",
+  teaser:
+    "A shocking image of a famous scientist spreads across the internet. It looks real — but did the event ever happen?",
+},
   {
     caseId: "2024-1501",
     title: "CLASSIFIED",
@@ -70,7 +71,7 @@ export const INITIAL_CASES: CaseRecord[] = [
 
   {
     caseId: "2024-1389",
-    status: "locked",
+    status: "available",
     lastScreen: "main-menu",
     verdictsGiven: [],
     wallSelection: null,
