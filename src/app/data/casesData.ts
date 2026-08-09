@@ -26,10 +26,11 @@ export const CASES_CATALOG = [
     "A shocking image of a famous scientist spreads across the internet. It looks real — but did the event ever happen?",
 },
   {
-    caseId: "2024-1501",
-    title: "CLASSIFIED",
-    teaser: null,
-  },
+  caseId: "2024-1501",
+  title: "THE VOICE THAT NEVER SPOKE",
+  teaser:
+    "A viral video appears to show a mayor announcing a dangerous water contamination. The footage looks real — but the voice never belonged to him.",
+},
 ];
 
 export const INITIAL_CASES: CaseRecord[] = [
@@ -83,7 +84,7 @@ export const INITIAL_CASES: CaseRecord[] = [
 
   {
     caseId: "2024-1501",
-    status: "locked",
+    status: "available",
     lastScreen: "main-menu",
     verdictsGiven: [],
     wallSelection: null,
