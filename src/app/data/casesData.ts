@@ -11,7 +11,7 @@ export const CASES_CATALOG = [
 
 export const INITIAL_CASES: CaseRecord[] = [
   { caseId: "2024-1147", status: "available",  lastScreen: "main-menu", verdictsGiven: [], wallSelection: null, timeRemainingSec: 847, finalVerdict: null, notebookNotes: "", discoveredFindings: [] },
-  { caseId: "2024-0891", status: "locked",     lastScreen: "main-menu", verdictsGiven: [], wallSelection: null, timeRemainingSec: 847, finalVerdict: null, notebookNotes: "", discoveredFindings: [] },
+  { caseId: "2024-0891", status: "available",     lastScreen: "main-menu", verdictsGiven: [], wallSelection: null, timeRemainingSec: 847, finalVerdict: null, notebookNotes: "", discoveredFindings: [] },
   { caseId: "2023-1204", status: "locked",     lastScreen: "main-menu", verdictsGiven: [], wallSelection: null, timeRemainingSec: 847, finalVerdict: null, notebookNotes: "", discoveredFindings: [] },
   { caseId: "2024-1389", status: "locked",     lastScreen: "main-menu", verdictsGiven: [], wallSelection: null, timeRemainingSec: 847, finalVerdict: null, notebookNotes: "", discoveredFindings: [] },
   { caseId: "2024-1501", status: "locked",     lastScreen: "main-menu", verdictsGiven: [], wallSelection: null, timeRemainingSec: 847, finalVerdict: null, notebookNotes: "", discoveredFindings: [] },
