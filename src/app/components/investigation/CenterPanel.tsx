@@ -2,7 +2,8 @@ import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
 import type { Tool } from "../../types";
-import { TOOLS_DATA, getToolResult, POST_ELEMENTS, POST_ELEMENT_META } from "../../data/investigationData";
+import { useCaseContent } from "../../context/CaseContentContext";
+import type { PostElement } from "../../data/caseContent.types";
 
 export function CenterPanel({ activeTool, selectedElement, investigated, onSelectElement, onMarkInvestigated }: {
   activeTool: Tool;
@@ -13,6 +14,8 @@ export function CenterPanel({ activeTool, selectedElement, investigated, onSelec
 }) {
   const [mouse, setMouse] = useState({ x: 50, y: 40 });
   const ref = useRef<HTMLDivElement>(null);
+  const { content, getToolResult } = useCaseContent();
+  const { toolsData: TOOLS_DATA, postElements: POST_ELEMENTS } = content;
 
   const handleMove = (e: React.MouseEvent) => {
     const rect = ref.current?.getBoundingClientRect();
@@ -24,7 +27,7 @@ export function CenterPanel({ activeTool, selectedElement, investigated, onSelec
   const selectedPost = POST_ELEMENTS.find(e => e.id === selectedElement) ?? null;
 
   // Inline span renderer — regular function, not a React component, avoids remount churn
-  const pspan = (el: typeof POST_ELEMENTS[0]) => {
+  const pspan = (el: PostElement) => {
     const isSel = selectedElement === el.id;
     const isDone = investigated.has(el.id);
     return (

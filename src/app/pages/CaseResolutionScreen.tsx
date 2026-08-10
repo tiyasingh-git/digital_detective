@@ -2,7 +2,8 @@ import { motion } from "motion/react";
 
 import type { Verdict, CaseRecord } from "../types";
 import { MiraPopup } from "../components/shared/Mira";
-import { STAMP_PALETTE, MIRA_DEBRIEFS } from "../data/investigationData";
+import { STAMP_PALETTE } from "../data/investigationData";
+import { useCaseContent } from "../context/CaseContentContext";
 
 // Per-element contribution to each scoring dimension (raw points)
 export const EL_SCORES: Record<string, { obs: number; ev: number; src: number; ver: number }> = {
@@ -90,6 +91,7 @@ export function CaseResolutionScreen({
   onReturn: () => void;
 }) {
   const color = STAMP_PALETTE[verdict].color;
+  const { content } = useCaseContent();
   const categoryScores = computeScores(investigated, caseRecord.notebookNotes ?? "");
   const { strengths, opportunities } = computeStrOpps(investigated, caseRecord.notebookNotes ?? "");
 
@@ -199,7 +201,7 @@ export function CaseResolutionScreen({
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }}
           style={{ width: "min(640px, 92vw)", marginBottom: "28px" }}
         >
-          <MiraPopup message={MIRA_DEBRIEFS[verdict]} />
+          <MiraPopup message={content.miraDebriefs[verdict]} />
         </motion.div>
 
         {/* CTA */}

@@ -1,6 +1,8 @@
-import { POST_ELEMENTS, POST_ELEMENT_META } from "../../data/investigationData";
+import { useCaseContent } from "../../context/CaseContentContext";
 
 export function LeftPanel({ investigated }: { investigated: string[] }) {
+  const { content } = useCaseContent();
+  const { postElements: POST_ELEMENTS, postElementMeta: POST_ELEMENT_META } = content;
   const importanceColor = { HIGH: "#e74c3c", MED: "#c9a227", LOW: "#6b5f42" };
 
   return (
