@@ -2,7 +2,7 @@ import { motion } from "motion/react";
 
 import { MiraPopup } from "../components/shared/Mira";
 import { CASES_CATALOG } from "../data/casesData";
-import { MIRA_MISSION_INTRO } from "../data/investigationData";
+import { useCaseContent } from "../context/CaseContentContext";
 
 export function MissionBriefingScreen({
   caseId, onAccept, onBack,
@@ -12,6 +12,7 @@ export function MissionBriefingScreen({
   onBack: () => void;
 }) {
   const meta = CASES_CATALOG.find(m => m.caseId === caseId)!;
+  const { content } = useCaseContent();
 
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center overflow-auto py-8"
@@ -80,7 +81,7 @@ export function MissionBriefingScreen({
 
         {/* Commander Mira briefing — outside parchment, on dark bg */}
         <div style={{ padding:"18px 4px 0" }}>
-          <MiraPopup message={MIRA_MISSION_INTRO} />
+          <MiraPopup message={content.miraMissionIntro} />
         </div>
 
         {/* Action row */}

@@ -1,9 +1,10 @@
 import { motion } from "motion/react";
 
 import type { Tool } from "../../types";
-import { TOOLS_DATA, getToolResult } from "../../data/investigationData";
+import { useCaseContent } from "../../context/CaseContentContext";
 
 export function GadgetBelt({ activeTool, onSelect, selectedElement }: { activeTool: Tool; onSelect: (t: Tool) => void; selectedElement: string | null }) {
+  const { content, getToolResult } = useCaseContent();
   return (
     <div className="flex flex-col h-full" style={{ borderLeft: "1px solid rgba(201,162,39,0.2)" }}>
       <div className="px-3 py-2" style={{ borderBottom: "1px solid rgba(201,162,39,0.2)" }}>
@@ -13,7 +14,7 @@ export function GadgetBelt({ activeTool, onSelect, selectedElement }: { activeTo
       </div>
 
       <div className="flex flex-col gap-2 p-2 flex-1">
-        {TOOLS_DATA.map((tool) => {
+        {content.toolsData.map((tool) => {
           const active = activeTool === tool.id;
           const result = getToolResult(tool.id, selectedElement);
           const isDim = result === "No relevant data for this selection." || result.startsWith("No ");
