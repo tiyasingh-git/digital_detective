@@ -1,5 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  AnimatePresence,
+  motion,
+} from "motion/react";
 
 import type {
   Screen,
@@ -36,10 +44,9 @@ import { ProfileScreen } from "./pages/ProfileScreen";
 import { MainMenuScreen } from "./pages/MainMenuScreen";
 import { CaseSelectScreen } from "./pages/CaseSelectScreen";
 import { MissionBriefingScreen } from "./pages/MissionBriefingScreen";
-import { InvestigationScreen } from "./pages/InvestigationScreen";
 
-import { Case2Screen } from "./pages/Case2Screen";
-
+import Case1Screen from "./pages/Case1Screen";
+import Case2Screen from "./pages/Case2Screen";
 import Case3Screen from "./pages/Case3Screen";
 import Case4Screen from "./pages/Case4Screen";
 import Case5Screen from "./pages/Case5Screen";
@@ -49,7 +56,6 @@ import { EvidenceWallScreen } from "./pages/EvidenceWallScreen";
 import { CaseResolutionScreen } from "./pages/CaseResolutionScreen";
 import { RecordsScreen } from "./pages/RecordsScreen";
 import { SettingsScreen } from "./pages/SettingsScreen";
-
 
 /* =========================================================
    HEADER NAVIGATION
@@ -64,7 +70,6 @@ export const SCREENS: {
     label: "CASE FILE",
   },
 ];
-
 
 /* =========================================================
    PRE-GAME SCREENS
@@ -84,100 +89,67 @@ export const PRE_GAME: Screen[] = [
   "profile",
 ];
 
+/* =========================================================
+   APP
+========================================================= */
 
 export default function App() {
-  /* =======================================================
-     SCREEN
-  ======================================================= */
-
   const [screen, setScreen] =
     useState<Screen>("boot");
 
-
-  /* =======================================================
-     PENDING CASE
-  ======================================================= */
-
   const [pendingCaseId, setPendingCaseId] =
     useState<string | null>(null);
-
-
-  /* =======================================================
-     PROFILE
-  ======================================================= */
 
   const [profile, setProfile] =
     useState<PlayerProfile | null>(
       () => loadProfile()
     );
 
-
-  /* =======================================================
-     CASES
-  ======================================================= */
-
   const [cases, setCases] =
-    useState<CaseRecord[]>(loadCases);
-
-
-  /* =======================================================
-     ACTIVE CASE
-  ======================================================= */
+    useState<CaseRecord[]>(
+      () => loadCases()
+    );
 
   const [activeCaseId, setActiveCaseId] =
     useState<string | null>(() => {
-      const stored = loadCases();
+      const storedCases = loadCases();
 
       return (
-        stored.find(
+        storedCases.find(
           (record) =>
-            record.status === "in-progress"
+            record.status ===
+            "in-progress"
         )?.caseId ?? null
       );
     });
 
-
-  /* =======================================================
-     FINAL VERDICT
-  ======================================================= */
-
   const [finalVerdict, setFinalVerdict] =
-    useState<NonNullable<Verdict> | null>(null);
-
-
-  /* =======================================================
-     RESOLUTION EVIDENCE
-  ======================================================= */
+    useState<NonNullable<Verdict> | null>(
+      null
+    );
 
   const [
     resolutionInvestigated,
     setResolutionInvestigated,
   ] = useState<string[]>([]);
 
-
-  /* =======================================================
-     SETTINGS
-  ======================================================= */
-
   const [settings, setSettings] =
     useState<SettingsState>(
-      loadSettings
+      () => loadSettings()
     );
 
-
   /* =========================================================
-     ACTIVE CASE RECORD
+     ACTIVE CASE
   ========================================================= */
 
   const activeCase =
-    activeCaseId
+    activeCaseId !== null
       ? cases.find(
           (record) =>
             record.caseId ===
             activeCaseId
         ) ?? null
       : null;
-
 
   /* =========================================================
      UPDATE CASE
@@ -192,13 +164,12 @@ export default function App() {
         ) => CaseRecord
       ) => {
         setCases((previous) => {
-          const next =
-            previous.map(
-              (record) =>
-                record.caseId === caseId
-                  ? updater(record)
-                  : record
-            );
+          const next = previous.map(
+            (record) =>
+              record.caseId === caseId
+                ? updater(record)
+                : record
+          );
 
           saveCases(next);
 
@@ -208,31 +179,33 @@ export default function App() {
       []
     );
 
-
   /* =========================================================
      SAVE LAST SCREEN
   ========================================================= */
 
   useEffect(() => {
     if (
-      !PRE_GAME.includes(screen) &&
-      screen !== "case-resolution" &&
-      activeCaseId
+      activeCaseId === null ||
+      PRE_GAME.includes(screen) ||
+      screen === "case-resolution" ||
+      screen === "notebook"
     ) {
-      updateCase(
-        activeCaseId,
-        (record) => ({
-          ...record,
-          lastScreen: screen,
-        })
-      );
+      return;
     }
+
+    updateCase(
+      activeCaseId,
+      (record) => ({
+        ...record,
+        lastScreen:
+          screen as CaseRecord["lastScreen"],
+      })
+    );
   }, [
     screen,
     activeCaseId,
     updateCase,
   ]);
-
 
   /* =========================================================
      CASE TIMER
@@ -240,27 +213,17 @@ export default function App() {
 
   useEffect(() => {
     if (
-      screen !== "investigation"
-    ) {
-      return;
-    }
-
-    if (
-      !activeCase ||
+      screen !== "investigation" ||
+      activeCase === null ||
       activeCase.status !==
-        "in-progress"
-    ) {
-      return;
-    }
-
-    if (
+        "in-progress" ||
       activeCase.timeRemainingSec <= 0
     ) {
       return;
     }
 
     const timer =
-      setInterval(() => {
+      window.setInterval(() => {
         updateCase(
           activeCase.caseId,
           (record) => ({
@@ -275,14 +238,14 @@ export default function App() {
         );
       }, 1000);
 
-    return () =>
-      clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+    };
   }, [
     screen,
     activeCase,
     updateCase,
   ]);
-
 
   /* =========================================================
      SPLASH
@@ -300,23 +263,20 @@ export default function App() {
       );
     }, []);
 
-
   /* =========================================================
-     PROFILE SAVE
+     PROFILE
   ========================================================= */
 
   const handleProfileSave =
     useCallback(
       (player: PlayerProfile) => {
         setProfile(player);
-
         setScreen(
           "mira-onboarding"
         );
       },
       []
     );
-
 
   /* =========================================================
      CASE SELECT
@@ -335,59 +295,43 @@ export default function App() {
             caseId,
             (record) => ({
               ...record,
-
               status:
                 "in-progress",
-
               verdictsGiven: [],
-
               wallSelection: null,
-
               timeRemainingSec: 847,
-
               lastScreen:
                 "investigation",
-
               finalVerdict: null,
-
-              discoveredFindings:
-                [],
+              discoveredFindings: [],
             })
           );
+
+          setScreen(
+            "investigation"
+          );
+
+          return;
         }
 
         const storedCase =
           cases.find(
             (record) =>
-              record.caseId ===
-              caseId
+              record.caseId === caseId
           );
 
         const storedScreen =
           storedCase?.lastScreen;
 
-        const validResumeScreens =
-          new Set<Screen>([
-            "investigation",
-          ]);
-
-        const resumeTarget =
-          storedScreen &&
-          validResumeScreens.has(
-            storedScreen
-          )
-            ? storedScreen
-            : "investigation";
-
         setScreen(
-          resume
-            ? resumeTarget
+          storedScreen ===
+            "investigation"
+            ? "investigation"
             : "investigation"
         );
       },
       [cases, updateCase]
     );
-
 
   /* =========================================================
      FINAL VERDICT
@@ -399,7 +343,7 @@ export default function App() {
         verdict: NonNullable<Verdict>,
         investigated: string[]
       ) => {
-        if (!activeCaseId) {
+        if (activeCaseId === null) {
           return;
         }
 
@@ -407,24 +351,19 @@ export default function App() {
           activeCaseId,
           (record) => ({
             ...record,
-
             status:
               "closed-solved",
-
             finalVerdict:
               verdict,
-
             lastScreen:
               "case-resolution",
           })
         );
 
         setFinalVerdict(verdict);
-
         setResolutionInvestigated(
           investigated
         );
-
         setScreen(
           "case-resolution"
         );
@@ -435,23 +374,29 @@ export default function App() {
       ]
     );
 
-
   /* =========================================================
      BACK TO BUREAU
   ========================================================= */
 
   const handleBackToBureau =
     useCallback(() => {
-      setFinalVerdict(null);
+      const currentCaseId =
+        activeCaseId;
 
+      setFinalVerdict(null);
+      setResolutionInvestigated([]);
       setScreen("main-menu");
+
+      if (currentCaseId === null) {
+        return;
+      }
 
       setCases((previous) => {
         const closedCase =
           previous.find(
             (record) =>
               record.caseId ===
-                activeCaseId &&
+                currentCaseId &&
               record.status ===
                 "closed-solved"
           );
@@ -464,7 +409,6 @@ export default function App() {
       });
     }, [activeCaseId]);
 
-
   /* =========================================================
      BACK TO MENU
   ========================================================= */
@@ -473,7 +417,6 @@ export default function App() {
     useCallback(() => {
       setScreen("main-menu");
     }, []);
-
 
   /* =========================================================
      NOTEBOOK
@@ -489,14 +432,12 @@ export default function App() {
           caseId,
           (record) => ({
             ...record,
-            notebookNotes:
-              notes,
+            notebookNotes: notes,
           })
         );
       },
       [updateCase]
     );
-
 
   /* =========================================================
      DISCOVER FINDING
@@ -507,18 +448,19 @@ export default function App() {
       (
         finding: DiscoveredFinding
       ) => {
-        if (!activeCaseId) {
+        if (activeCaseId === null) {
           return;
         }
 
         updateCase(
           activeCaseId,
           (record) => {
+            const existingFindings =
+              record.discoveredFindings ??
+              [];
+
             const alreadyDiscovered =
-              (
-                record.discoveredFindings ??
-                []
-              ).some(
+              existingFindings.some(
                 (existing) =>
                   existing.elementId ===
                     finding.elementId &&
@@ -534,10 +476,8 @@ export default function App() {
 
             return {
               ...record,
-
               discoveredFindings: [
-                ...(record.discoveredFindings ??
-                  []),
+                ...existingFindings,
                 finding,
               ],
             };
@@ -550,16 +490,12 @@ export default function App() {
       ]
     );
 
-
   /* =========================================================
-     UI FLAGS
+     UI
   ========================================================= */
 
   const isPreGame =
     PRE_GAME.includes(screen);
-
-  const isCritical = false;
-
 
   /* =========================================================
      RENDER
@@ -567,25 +503,26 @@ export default function App() {
 
   return (
     <div
-      className="w-screen h-screen overflow-hidden flex flex-col select-none"
+      className="
+        w-screen
+        h-screen
+        overflow-hidden
+        flex
+        flex-col
+        select-none
+      "
       style={{
-        backgroundColor:
-          "#07090f",
-
-        color:
-          "#c9b882",
-
+        backgroundColor: "#07090f",
+        color: "#c9b882",
         fontFamily:
           "Courier Prime, monospace",
       }}
     >
-
       <StyleInjector />
 
       <Grain />
       <ScanLines />
       <Vignette />
-
 
       {/* =====================================================
           HEADER
@@ -594,362 +531,267 @@ export default function App() {
       {!isPreGame &&
         screen !==
           "case-resolution" &&
-        screen !==
-          "notebook" && (
-
-        <header
-          className="flex items-center justify-between px-4 py-2 relative flex-shrink-0"
-          style={{
-            backgroundColor:
-              "rgba(3,5,12,0.97)",
-
-            borderBottom:
-              "1px solid rgba(201,162,39,0.25)",
-
-            zIndex: 150,
-          }}
-        >
-
-          <div className="flex items-center gap-4">
-
-            {activeCase?.status ===
-            "in-progress" ? (
-
-              <div
-                style={{
-                  fontFamily:
-                    "Courier Prime, monospace",
-
-                  fontSize:
-                    "10px",
-
-                  letterSpacing:
-                    "0.18em",
-
-                  color:
-                    "rgba(201,162,39,0.28)",
-
-                  border:
-                    "1px solid rgba(201,162,39,0.12)",
-
-                  padding:
-                    "4px 12px",
-
-                  userSelect:
-                    "none",
-                }}
-              >
-                CASE ACTIVE
-              </div>
-
-            ) : (
-
-              <button
-                type="button"
-                onClick={
-                  handleBackToMenu
-                }
-                title={
-                  isCritical
-                    ? "FINISH OR ABANDON THEORY"
-                    : undefined
-                }
-                style={{
-                  fontFamily:
-                    "Special Elite, serif",
-
-                  fontSize:
-                    "22px",
-
-                  letterSpacing:
-                    "0.15em",
-
-                  color:
-                    isCritical
-                      ? "#3a3428"
-                      : "#c9a227",
-
-                  border:
-                    `1px solid ${
-                      isCritical
-                        ? "rgba(201,162,39,0.15)"
-                        : "rgba(201,162,39,0.4)"
-                    }`,
-
-                  backgroundColor:
-                    "transparent",
-
-                  padding:
-                    "4px 12px",
-
-                  cursor:
-                    isCritical
-                      ? "not-allowed"
-                      : "pointer",
-                }}
-              >
-                ← BUREAU
-              </button>
-            )}
-
+        screen !== "notebook" && (
+          <header
+            className="
+              flex
+              items-center
+              justify-between
+              px-4
+              py-2
+              relative
+              flex-shrink-0
+            "
+            style={{
+              backgroundColor:
+                "rgba(3,5,12,0.97)",
+              borderBottom:
+                "1px solid rgba(201,162,39,0.25)",
+              zIndex: 150,
+            }}
+          >
             <div
-              style={{
-                transform:
-                  "rotate(-3.5deg)",
-
-                lineHeight: 1,
-              }}
+              className="
+                flex
+                items-center
+                gap-4
+              "
             >
+              {activeCase?.status ===
+              "in-progress" ? (
+                <div
+                  style={{
+                    fontSize: "10px",
+                    letterSpacing:
+                      "0.18em",
+                    color:
+                      "rgba(201,162,39,0.28)",
+                    border:
+                      "1px solid rgba(201,162,39,0.12)",
+                    padding:
+                      "4px 12px",
+                  }}
+                >
+                  CASE ACTIVE
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={
+                    handleBackToMenu
+                  }
+                  style={{
+                    fontFamily:
+                      "Special Elite, serif",
+                    fontSize: "22px",
+                    letterSpacing:
+                      "0.15em",
+                    color: "#c9a227",
+                    border:
+                      "1px solid rgba(201,162,39,0.4)",
+                    backgroundColor:
+                      "transparent",
+                    padding:
+                      "4px 12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  ← BUREAU
+                </button>
+              )}
 
               <div
-                className="amber-glow"
                 style={{
-                  fontFamily:
-                    "Special Elite, serif",
-
-                  fontSize:
-                    "20px",
-
-                  color:
-                    "#ffd966",
-
-                  letterSpacing:
-                    "0.1em",
+                  transform:
+                    "rotate(-3.5deg)",
+                  lineHeight: 1,
                 }}
               >
-                {activeCaseId ??
-                  "CASE 2024-1147"}
-              </div>
+                <div
+                  className="amber-glow"
+                  style={{
+                    fontFamily:
+                      "Special Elite, serif",
+                    fontSize: "20px",
+                    color: "#ffd966",
+                    letterSpacing:
+                      "0.1em",
+                  }}
+                >
+                  {activeCaseId ??
+                    "CASE 2024-1147"}
+                </div>
 
-              <div
-                style={{
-                  fontFamily:
-                    "Courier Prime, monospace",
-
-                  fontSize:
-                    "9.5px",
-
-                  color:
-                    "#b8a878",
-
-                  letterSpacing:
-                    "0.22em",
-                }}
-              >
-                {
-                  CASES_CATALOG.find(
+                <div
+                  style={{
+                    fontSize: "9.5px",
+                    color: "#b8a878",
+                    letterSpacing:
+                      "0.22em",
+                  }}
+                >
+                  {CASES_CATALOG.find(
                     (record) =>
                       record.caseId ===
                       activeCaseId
                   )?.title ??
-                    "THE MIRACLE CURE"
-                }
-
-                {" · ACTIVE"}
+                    "THE MIRACLE CURE"}
+                  {" · ACTIVE"}
+                </div>
               </div>
-
             </div>
-          </div>
 
-
-          <nav className="flex gap-0.5">
-
-            {SCREENS.map(
-              (item) => (
-
-                <button
-                  type="button"
-                  key={item.id}
-                  onClick={() =>
-                    setScreen(
-                      item.id
-                    )
-                  }
-                  style={{
-                    fontFamily:
-                      "Courier Prime, monospace",
-
-                    fontSize:
-                      "9px",
-
-                    letterSpacing:
-                      "0.16em",
-
-                    padding:
-                      "5px 13px",
-
-                    color:
-                      screen ===
-                      item.id
-                        ? "#07090f"
-                        : "#c9b882",
-
-                    backgroundColor:
-                      screen ===
-                      item.id
-                        ? "#c9a227"
-                        : "transparent",
-
-                    border:
-                      `1px solid ${
+            <nav className="flex gap-0.5">
+              {SCREENS.map(
+                (item) => (
+                  <button
+                    type="button"
+                    key={item.id}
+                    onClick={() =>
+                      setScreen(
+                        item.id
+                      )
+                    }
+                    style={{
+                      fontSize: "9px",
+                      letterSpacing:
+                        "0.16em",
+                      padding:
+                        "5px 13px",
+                      color:
+                        screen ===
+                        item.id
+                          ? "#07090f"
+                          : "#c9b882",
+                      backgroundColor:
                         screen ===
                         item.id
                           ? "#c9a227"
-                          : "rgba(201,162,39,0.22)"
-                      }`,
-
-                    cursor:
-                      "pointer",
-                  }}
-                >
-                  {item.label}
-                </button>
-
-              )
-            )}
-
-          </nav>
-
-
-          <div
-            style={{
-              textAlign:
-                "right",
-            }}
-          >
-
-            <div
-              className="cyan-flicker"
-              style={{
-                fontFamily:
-                  "Courier Prime, monospace",
-
-                fontSize:
-                  "9px",
-
-                color:
-                  "#00e9ff",
-
-                letterSpacing:
-                  "0.15em",
-              }}
-            >
-              ● ACTIVE INVESTIGATION
-            </div>
+                          : "transparent",
+                      border:
+                        `1px solid ${
+                          screen ===
+                          item.id
+                            ? "#c9a227"
+                            : "rgba(201,162,39,0.22)"
+                        }`,
+                      cursor:
+                        "pointer",
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                )
+              )}
+            </nav>
 
             <div
               style={{
-                fontFamily:
-                  "Courier Prime, monospace",
-
-                fontSize:
-                  "9.5px",
-
-                color:
-                  "#b8a878",
-
-                letterSpacing:
-                  "0.12em",
-
-                marginTop:
-                  "2px",
+                textAlign: "right",
               }}
             >
-              {activeCase
-                ? `${Math.floor(
-                    activeCase.timeRemainingSec /
+              <div
+                className="cyan-flicker"
+                style={{
+                  fontSize: "9px",
+                  color: "#00e9ff",
+                  letterSpacing:
+                    "0.15em",
+                }}
+              >
+                ● ACTIVE INVESTIGATION
+              </div>
+
+              <div
+                style={{
+                  fontSize: "9.5px",
+                  color: "#b8a878",
+                  letterSpacing:
+                    "0.12em",
+                  marginTop: "2px",
+                }}
+              >
+                {activeCase
+                  ? `${Math.floor(
+                      activeCase.timeRemainingSec /
+                        60
+                    )
+                      .toString()
+                      .padStart(
+                        2,
+                        "0"
+                      )}:${(
+                      activeCase.timeRemainingSec %
                       60
-                  )
-                    .toString()
-                    .padStart(
-                      2,
-                      "0"
-                    )}:${(
-                    activeCase.timeRemainingSec %
-                    60
-                  )
-                    .toString()
-                    .padStart(
-                      2,
-                      "0"
-                    )} · PRECINCT 14`
-                : "02:47:33 · PRECINCT 14"}
+                    )
+                      .toString()
+                      .padStart(
+                        2,
+                        "0"
+                      )} · PRECINCT 14`
+                  : "14:07 · PRECINCT 14"}
+              </div>
             </div>
-
-          </div>
-
-        </header>
-      )}
-
+          </header>
+        )}
 
       {/* =====================================================
           MAIN
       ===================================================== */}
 
       <main
-        className="flex-1 overflow-hidden relative"
+        className="
+          flex-1
+          overflow-hidden
+          relative
+        "
         style={{
           zIndex: 120,
         }}
       >
-
         <AnimatePresence mode="wait">
-
           <motion.div
             key={screen}
-            className="absolute inset-0"
-
+            className="
+              absolute
+              inset-0
+            "
             initial={{
               opacity: 0,
             }}
-
             animate={{
               opacity: 1,
             }}
-
             exit={{
               opacity: 0,
             }}
-
             transition={{
               duration: 0.28,
             }}
           >
-
-
             {/* =================================================
                 BOOT
             ================================================= */}
 
-            {screen ===
-              "boot" && (
-
+            {screen === "boot" && (
               <BootScreen
                 onDone={() =>
-                  setScreen(
-                    "splash"
-                  )
+                  setScreen("splash")
                 }
               />
-
             )}
-
 
             {/* =================================================
                 SPLASH
             ================================================= */}
 
-            {screen ===
-              "splash" && (
-
+            {screen === "splash" && (
               <SplashScreen
                 onDone={
                   handleSplashDone
                 }
               />
-
             )}
-
 
             {/* =================================================
                 RECRUITMENT
@@ -957,7 +799,6 @@ export default function App() {
 
             {screen ===
               "recruitment-letter" && (
-
               <RecruitmentLetterScreen
                 onAccept={() =>
                   setScreen(
@@ -965,9 +806,7 @@ export default function App() {
                   )
                 }
               />
-
             )}
-
 
             {/* =================================================
                 PROFILE CREATION
@@ -975,15 +814,12 @@ export default function App() {
 
             {screen ===
               "profile-creation" && (
-
               <ProfileCreationScreen
                 onSave={
                   handleProfileSave
                 }
               />
-
             )}
-
 
             {/* =================================================
                 MIRA ONBOARDING
@@ -991,7 +827,6 @@ export default function App() {
 
             {screen ===
               "mira-onboarding" && (
-
               <MiraOnboardingScreen
                 onDone={() =>
                   setScreen(
@@ -999,41 +834,23 @@ export default function App() {
                   )
                 }
               />
-
             )}
-
 
             {/* =================================================
                 MAIN MENU
             ================================================= */}
 
-            {screen ===
-              "main-menu" && (
-
+            {screen === "main-menu" && (
               <MainMenuScreen
-                onNavigate={
-                  setScreen
-                }
-
-                cases={
-                  cases
-                }
-
+                onNavigate={setScreen}
+                cases={cases}
                 reduceMotion={
                   settings.reduceMotion
                 }
-
-                settings={
-                  settings
-                }
-
-                profile={
-                  profile
-                }
+                settings={settings}
+                profile={profile}
               />
-
             )}
-
 
             {/* =================================================
                 CASE SELECT
@@ -1041,255 +858,182 @@ export default function App() {
 
             {screen ===
               "case-select" && (
-
               <CaseSelectScreen
-                cases={
-                  cases
-                }
-
+                cases={cases}
                 onSelect={
                   handleCaseSelect
                 }
-
                 onBrief={(id) => {
-                  setPendingCaseId(
-                    id
-                  );
-
+                  setPendingCaseId(id);
                   setScreen(
                     "mission-briefing"
                   );
                 }}
-
                 onBack={
                   handleBackToMenu
                 }
               />
-
             )}
-
 
             {/* =================================================
                 MISSION BRIEFING
             ================================================= */}
 
             {screen ===
-              "mission-briefing" &&
-              pendingCaseId && (
-
-              <MissionBriefingScreen
-                caseId={
-                  pendingCaseId
-                }
-
-                onAccept={() => {
-                  handleCaseSelect(
-                    pendingCaseId,
-                    false
-                  );
-
-                  setPendingCaseId(
-                    null
-                  );
-                }}
-
-                onBack={() => {
-                  setPendingCaseId(
-                    null
-                  );
-
-                  setScreen(
-                    "case-select"
-                  );
-                }}
-              />
-
-            )}
-
+                "mission-briefing" &&
+              pendingCaseId !== null && (
+                <MissionBriefingScreen
+                  caseId={
+                    pendingCaseId
+                  }
+                  onAccept={() => {
+                    handleCaseSelect(
+                      pendingCaseId,
+                      false
+                    );
+                    setPendingCaseId(
+                      null
+                    );
+                  }}
+                  onBack={() => {
+                    setPendingCaseId(
+                      null
+                    );
+                    setScreen(
+                      "case-select"
+                    );
+                  }}
+                />
+              )}
 
             {/* =================================================
                 RECORDS
             ================================================= */}
 
-            {screen ===
-              "records" && (
-
+            {screen === "records" && (
               <RecordsScreen
                 onBack={
                   handleBackToMenu
                 }
               />
-
             )}
-
 
             {/* =================================================
                 SETTINGS
             ================================================= */}
 
-            {screen ===
-              "settings" && (
-
+            {screen === "settings" && (
               <SettingsScreen
                 onBack={
                   handleBackToMenu
                 }
-
-                profile={
-                  profile
-                }
-
-                settings={
-                  settings
-                }
-
+                profile={profile}
+                settings={settings}
                 onSettingsChange={
                   setSettings
                 }
               />
-
             )}
 
+            {/* =================================================
+                CASE 1
+            ================================================= */}
+
+            {screen ===
+                "investigation" &&
+              activeCaseId ===
+                "2024-1147" && (
+                <Case1Screen
+                  onVerdictFinal={
+                    handleVerdictFinal
+                  }
+                />
+              )}
 
             {/* =================================================
                 CASE 2
             ================================================= */}
 
             {screen ===
-              "investigation" &&
+                "investigation" &&
               activeCaseId ===
-                "2024-0891" && (
-
-              <Case2Screen
-                onVerdictFinal={
-                  handleVerdictFinal
-                }
-              />
-
-            )}
-
+                "2024-1502" && (
+                <Case2Screen
+                  onVerdictFinal={
+                    handleVerdictFinal
+                  }
+                />
+              )}
 
             {/* =================================================
                 CASE 3
             ================================================= */}
 
             {screen ===
-              "investigation" &&
+                "investigation" &&
               activeCaseId ===
                 "2023-1204" && (
-
-              <Case3Screen />
-
-            )}
-
+                <Case3Screen />
+              )}
 
             {/* =================================================
                 CASE 4
             ================================================= */}
 
             {screen ===
-              "investigation" &&
+                "investigation" &&
               activeCaseId ===
                 "2024-1389" && (
-
-              <Case4Screen
-                onVerdictFinal={
-                  handleVerdictFinal
-                }
-              />
-
-            )}
-
+                <Case4Screen
+                  onVerdictFinal={
+                    handleVerdictFinal
+                  }
+                />
+              )}
 
             {/* =================================================
                 CASE 5
             ================================================= */}
 
             {screen ===
-              "investigation" &&
+                "investigation" &&
               activeCaseId ===
                 "2024-1501" && (
-
-              <Case5Screen
-                onVerdictFinal={
-                  handleVerdictFinal
-                }
-              />
-
-            )}
-
-
-            {/* =================================================
-                OTHER CASES
-            ================================================= */}
-
-            {screen ===
-              "investigation" &&
-              activeCaseId !==
-                "2024-0891" &&
-              activeCaseId !==
-                "2023-1204" &&
-              activeCaseId !==
-                "2024-1389" &&
-              activeCaseId !==
-                "2024-1501" && (
-
-              <InvestigationScreen
-                onVerdictFinal={
-                  handleVerdictFinal
-                }
-
-                onDiscoverFinding={
-                  handleDiscoverFinding
-                }
-              />
-
-            )}
-
+                <Case5Screen
+                  onVerdictFinal={
+                    handleVerdictFinal
+                  }
+                />
+              )}
 
             {/* =================================================
                 NOTEBOOK
             ================================================= */}
 
-            {screen ===
-              "notebook" && (
-
+            {screen === "notebook" && (
               <NotebookScreen
-                cases={
-                  cases
-                }
-
+                cases={cases}
                 onUpdateNotes={
                   handleUpdateNotebookNotes
                 }
-
                 onBack={
                   handleBackToMenu
                 }
               />
-
             )}
-
 
             {/* =================================================
                 PROFILE
             ================================================= */}
 
-            {screen ===
-              "profile" && (
-
+            {screen === "profile" && (
               <ProfileScreen
-                profile={
-                  profile
-                }
-
+                profile={profile}
                 onBack={
                   handleBackToMenu
                 }
               />
-
             )}
-
 
             {/* =================================================
                 EVIDENCE WALL
@@ -1297,51 +1041,35 @@ export default function App() {
 
             {screen ===
               "evidence-wall" && (
-
               <EvidenceWallScreen
-                cases={
-                  cases
-                }
+                cases={cases}
               />
-
             )}
-
 
             {/* =================================================
                 CASE RESOLUTION
             ================================================= */}
 
             {screen ===
-              "case-resolution" &&
-              finalVerdict &&
-              activeCase && (
-
-              <CaseResolutionScreen
-                verdict={
-                  finalVerdict
-                }
-
-                caseRecord={
-                  activeCase
-                }
-
-                investigated={
-                  resolutionInvestigated
-                }
-
-                onReturn={
-                  handleBackToBureau
-                }
-              />
-
-            )}
-
+                "case-resolution" &&
+              finalVerdict !== null &&
+              activeCase !== null && (
+                <CaseResolutionScreen
+                  verdict={finalVerdict}
+                  caseRecord={
+                    activeCase
+                  }
+                  investigated={
+                    resolutionInvestigated
+                  }
+                  onReturn={
+                    handleBackToBureau
+                  }
+                />
+              )}
           </motion.div>
-
         </AnimatePresence>
-
       </main>
-
     </div>
   );
 }
