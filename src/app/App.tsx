@@ -1,5 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  AnimatePresence,
+  motion,
+} from "motion/react";
 
 import type { Screen, Tool, Verdict, CaseStatus, DiscoveredFinding, CaseRecord, PlayerProfile, SettingsState } from "./types";
 import { CASES_CATALOG } from "./data/casesData";
@@ -25,6 +33,33 @@ import { CaseResolutionScreen } from "./pages/CaseResolutionScreen";
 import { RecordsScreen } from "./pages/RecordsScreen";
 import { SettingsScreen } from "./pages/SettingsScreen";
 
+
+export const SCREENS: {
+  id: Screen;
+  label: string;
+}[] = [
+  {
+    id: "investigation",
+    label: "CASE FILE",
+  },
+];
+
+/* =========================================================
+   PRE-GAME SCREENS
+
+export const PRE_GAME: Screen[] = [
+  "boot",
+  "splash",
+  "recruitment-letter",
+  "profile-creation",
+  "mira-onboarding",
+  "main-menu",
+  "case-select",
+  "mission-briefing",
+  "records",
+  "settings",
+  "profile",
+];
 export const SCREENS: { id: Screen; label: string }[] = [
   { id: "investigation", label: "CASE FILE" },
 ];
@@ -32,6 +67,9 @@ export const SCREENS: { id: Screen; label: string }[] = [
 
 export const PRE_GAME: Screen[] = ["boot", "splash", "recruitment-letter", "profile-creation", "mira-onboarding", "main-menu", "case-select", "mission-briefing", "records", "settings", "profile"];
 
+/* =========================================================
+   APP
+========================================================= */
 
 export default function App() {
   const [screen, setScreen]     = useState<Screen>("boot");

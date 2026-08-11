@@ -1,1175 +1,1019 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import type { Verdict } from "../types";
 
-import {
-  CASE2_INFO,
-  CASE2_POST,
-  CASE2_ELEMENTS,
-  CASE2_TOOLS,
-  getCase2Finding,
-  type Case2Tool,
-} from "../data/case2Data";
-
-type Verdict = "TRUST" | "VERIFY" | "REJECT" | "REPORT";
-
-export function Case2Screen({
-  onVerdictFinal,
-}: {
+interface Case2ScreenProps {
   onVerdictFinal: (
-    verdict: Verdict,
+    verdict: NonNullable<Verdict>,
     investigated: string[]
   ) => void;
-}) {
-  const [activeTool, setActiveTool] =
-    useState<Case2Tool | null>(null);
+}
 
-  const [selectedElement, setSelectedElement] =
-    useState<string | null>(null);
+type Phase =
+  | "transition"
+  | "briefing"
+  | "evidence"
+  | "decision"
+  | "debrief"
+  | "quiz"
+  | "rewards";
 
+interface Clue {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  finding: string;
+}
+
+const CLUES: Clue[] = [
+  {
+    id: "reverse-image",
+    title: "REVERSE IMAGE SEARCH",
+    category: "IMAGE VERIFICATION",
+    description:
+      "The exact same photograph appears in an article published five years earlier.",
+    finding: "Image existed five years earlier.",
+  },
+  {
+    id: "image-details",
+    title: "IMAGE DETAILS",
+    category: "VISUAL INSPECTION",
+    description:
+      "The photograph contains old emergency vehicles, outdated logos, a damaged bridge that no longer exists, and festival advertisements from years ago.",
+    finding: "Image contains outdated landmarks and visual details.",
+  },
+  {
+    id: "weather",
+    title: "WEATHER REPORT",
+    category: "OFFICIAL DATA",
+    description:
+      "Today's official forecast is sunny. There is no rainfall or flood warning matching the viral claim.",
+    finding: "Weather does not match the claim.",
+  },
+  {
+    id: "local-news",
+    title: "LOCAL NEWS",
+    category: "CROSS-CHECK",
+    description:
+      "No trusted news organizations are reporting the claimed flooding. Only one blog repeats the viral image.",
+    finding: "No credible independent confirmation.",
+  },
+  {
+    id: "donation",
+    title: "DONATION WEBSITE",
+    category: "SOURCE CHECK",
+    description:
+      "The website was created only yesterday. It provides no registered charity information or contact details, and payments go to an anonymous personal wallet.",
+    finding: "Suspicious donation request.",
+  },
+];
+
+const QUIZ_ANSWERS = [
+  {
+    question: "Why was the viral post misleading?",
+    options: [
+      "The image was AI-generated.",
+      "The image was edited.",
+      "The image was real but taken from an old event and presented as current.",
+      "The flood never happened anywhere.",
+    ],
+    correct: 2,
+  },
+  {
+    question: "Which investigation tool helped reveal the truth first?",
+    options: [
+      "Comments",
+      "Reverse Image Search",
+      "Likes",
+      "Shares",
+    ],
+    correct: 1,
+  },
+  {
+    question: "Before donating online, you should...",
+    options: [
+      "Donate immediately if many people have shared the post.",
+      "Verify both the event and the legitimacy of the charity.",
+    ],
+    correct: 1,
+  },
+];
+
+export default function Case2Screen({
+  onVerdictFinal,
+}: Case2ScreenProps) {
+  const [phase, setPhase] = useState<Phase>("transition");
+  const [selectedClue, setSelectedClue] = useState<string | null>(null);
   const [investigated, setInvestigated] = useState<string[]>([]);
-
-  const [showStamp, setShowStamp] =
-    useState<Verdict | null>(null);
-
-  const selectedPost = CASE2_ELEMENTS.find(
-    (element) => element.id === selectedElement
+  const [selectedVerdict, setSelectedVerdict] = useState<number | null>(
+    null
   );
+  const [quizIndex, setQuizIndex] = useState(0);
+  const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
 
-  const markInvestigated = (id: string) => {
+  const discoverClue = (clue: Clue) => {
+    setSelectedClue(clue.id);
+
     setInvestigated((previous) =>
-      previous.includes(id)
+      previous.includes(clue.id)
         ? previous
-        : [...previous, id]
-    );
-
-    setSelectedElement(null);
-  };
-
-  const selectElement = (id: string) => {
-    setSelectedElement(
-      selectedElement === id ? null : id
+        : [...previous, clue.id]
     );
   };
 
-  const handleVerdict = (verdict: Verdict) => {
-    setShowStamp(verdict);
-  };
+  const submitVerdict = () => {
+    if (selectedVerdict !== 2) {
+      return;
+    }
 
-  const finishVerdict = () => {
-    if (!showStamp) return;
-
+    /*
+     * "verify" is the existing MIL action used by the application.
+     * The cast keeps this screen compatible with the Verdict union
+     * already defined in the project.
+     */
     onVerdictFinal(
-      showStamp,
+      "verify" as NonNullable<Verdict>,
       investigated
     );
+
+    setPhase("debrief");
   };
 
-  const renderElement = (
-    element: (typeof CASE2_ELEMENTS)[number]
-  ) => {
-    const selected =
-      selectedElement === element.id;
+  const answerQuiz = (index: number) => {
+    setQuizAnswer(index);
+  };
 
-    const done =
-      investigated.includes(element.id);
+  const nextQuizQuestion = () => {
+    if (quizAnswer === null) {
+      return;
+    }
 
-    return (
-      <span
-        key={element.id}
-        onClick={(event) => {
-          event.stopPropagation();
-          selectElement(element.id);
-        }}
-        style={{
-          cursor: "pointer",
-          padding: "0 3px",
-          color: selected
-            ? "#ffd966"
-            : done
-            ? "#c9a227"
-            : "#c2baa0",
+    if (quizIndex < QUIZ_ANSWERS.length - 1) {
+      setQuizIndex((previous) => previous + 1);
+      setQuizAnswer(null);
+    } else {
+      setPhase("rewards");
+    }
+  };
 
-          backgroundColor: selected
-            ? "rgba(201,162,39,0.16)"
-            : done
-            ? "rgba(201,162,39,0.06)"
-            : "transparent",
+  const pageStyle: React.CSSProperties = {
+    width: "100%",
+    height: "100%",
+    overflowY: "auto",
+    padding: "36px 48px",
+    boxSizing: "border-box",
+    background:
+      "radial-gradient(circle at top, rgba(201,162,39,0.08), transparent 42%), #07090f",
+    color: "#c9b882",
+  };
 
-          border: selected
-            ? "1px solid rgba(201,162,39,0.45)"
-            : "1px solid transparent",
+  const titleStyle: React.CSSProperties = {
+    fontFamily: "Special Elite, serif",
+    color: "#ffd966",
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+  };
 
-          transition:
-            "background-color 0.15s, color 0.15s",
-        }}
-      >
-        {element.content}
+  const panelStyle: React.CSSProperties = {
+    border: "1px solid rgba(201,162,39,0.28)",
+    background: "rgba(8,11,18,0.88)",
+    padding: "24px",
+    marginBottom: "18px",
+    boxShadow: "0 0 30px rgba(0,0,0,0.2)",
+  };
 
-        {done && (
-          <span
-            style={{
-              fontSize: "7px",
-              color: "#c9a227",
-              verticalAlign: "super",
-              marginLeft: "3px",
-            }}
-          >
-            ✓
-          </span>
-        )}
-      </span>
-    );
+  const buttonStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "14px 18px",
+    marginTop: "10px",
+    border: "1px solid rgba(201,162,39,0.35)",
+    background: "rgba(201,162,39,0.05)",
+    color: "#c9b882",
+    fontFamily: "Courier Prime, monospace",
+    letterSpacing: "0.08em",
+    textAlign: "left",
+    cursor: "pointer",
   };
 
   return (
-    <div
-      className="flex flex-col h-full"
-      style={{
-        backgroundColor: "#07090f",
-        color: "#c9b882",
-        fontFamily: "Courier Prime, monospace",
-      }}
-    >
-      {/* MAIN INVESTIGATION AREA */}
-
-      <div className="flex flex-1 overflow-hidden">
-
-        {/* LEFT PANEL */}
-
-        <div
-          style={{
-            width: "220px",
-            flexShrink: 0,
-            borderRight:
-              "1px solid rgba(201,162,39,0.2)",
-          }}
-          className="flex flex-col"
-        >
-          <div
-            style={{
-              padding: "9px 12px 8px",
-              borderBottom:
-                "1px solid rgba(201,162,39,0.14)",
-            }}
+    <div style={pageStyle}>
+      <AnimatePresence mode="wait">
+        {/* =====================================================
+            TRANSITION
+        ===================================================== */}
+        {phase === "transition" && (
+          <motion.section
+            key="transition"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            style={{ maxWidth: 900, margin: "0 auto" }}
           >
-            <div
-              style={{
-                fontSize: "8px",
-                color:
-                  "rgba(201,162,39,0.45)",
-                letterSpacing: "0.22em",
-              }}
-            >
-              CASE FILE
-            </div>
-
-            <div
-              style={{
-                fontFamily:
-                  "Special Elite, serif",
-                fontSize: "12px",
-                color: "#ffd966",
-                letterSpacing: "0.1em",
-              }}
-            >
-              OBSERVATIONS
-            </div>
-          </div>
-
-          <div
-            className="flex-1 overflow-y-auto"
-            style={{
-              padding: "8px",
-            }}
-          >
-            {investigated.length === 0 ? (
+            <div style={panelStyle}>
               <div
                 style={{
-                  padding: "16px 8px",
+                  fontFamily: "Courier Prime, monospace",
+                  fontSize: "11px",
+                  letterSpacing: "0.2em",
+                  color: "#00e9ff",
+                  marginBottom: "20px",
+                }}
+              >
+                🔔 NEW CASE RECEIVED
+              </div>
+
+              <h1 style={{ ...titleStyle, fontSize: "38px" }}>
+                YESTERDAY'S DISASTER
+              </h1>
+
+              <p style={{ lineHeight: 1.9 }}>
+                Excellent work on your first mission, Detective.
+              </p>
+
+              <p style={{ lineHeight: 1.9 }}>
+                You stopped misinformation before it could spread
+                further.
+              </p>
+
+              <p style={{ lineHeight: 1.9 }}>
+                But not every false story is created from fake words.
+              </p>
+
+              <p style={{ lineHeight: 1.9 }}>
+                Sometimes...
+                <br />
+                <strong style={{ color: "#ffd966" }}>
+                  The truth is hidden behind a real photograph.
+                </strong>
+              </p>
+
+              <button
+                type="button"
+                style={{
+                  ...buttonStyle,
                   textAlign: "center",
-                  fontSize: "8px",
-                  color:
-                    "rgba(201,162,39,0.28)",
-                  letterSpacing: "0.12em",
-                  lineHeight: 1.9,
+                  background: "#c9a227",
+                  color: "#07090f",
                 }}
+                onClick={() => setPhase("briefing")}
               >
-                SELECT AN ELEMENT
-                <br />
-                IN THE POST TO BEGIN
-                <br />
-                INVESTIGATION
-              </div>
-            ) : (
-              <div
-                className="flex flex-col"
-                style={{ gap: "5px" }}
-              >
-                {investigated.map((id) => {
-                  const element =
-                    CASE2_ELEMENTS.find(
-                      (item) => item.id === id
-                    );
-
-                  if (!element) return null;
-
-                  const importanceColor =
-                    element.importance === "HIGH"
-                      ? "#e74c3c"
-                      : element.importance ===
-                        "MED"
-                      ? "#c9a227"
-                      : "#6b5f42";
-
-                  return (
-                    <div
-                      key={id}
-                      style={{
-                        border:
-                          "1px solid rgba(201,162,39,0.14)",
-                        padding:
-                          "7px 8px",
-                        backgroundColor:
-                          "rgba(201,162,39,0.03)",
-                      }}
-                    >
-                      <div
-                        className="flex items-center justify-between"
-                        style={{
-                          marginBottom: "3px",
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: "7.5px",
-                            color:
-                              "rgba(201,162,39,0.45)",
-                            letterSpacing:
-                              "0.14em",
-                          }}
-                        >
-                          {element.tag}
-                        </span>
-
-                        <span
-                          style={{
-                            fontSize: "7px",
-                            color:
-                              importanceColor,
-                          }}
-                        >
-                          {element.importance}
-                        </span>
-                      </div>
-
-                      <div
-                        style={{
-                          fontSize: "8.5px",
-                          color: "#c9b882",
-                          lineHeight: 1.5,
-                        }}
-                      >
-                        {element.content.length >
-                        42
-                          ? element.content.slice(
-                              0,
-                              42
-                            ) + "…"
-                          : element.content}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div
-            style={{
-              padding:
-                "8px 12px 10px",
-              borderTop:
-                "1px solid rgba(201,162,39,0.14)",
-            }}
-          >
-            <div
-              className="flex justify-between"
-              style={{
-                marginBottom: "5px",
-                fontSize: "7.5px",
-                color:
-                  "rgba(201,162,39,0.4)",
-                letterSpacing: "0.14em",
-              }}
-            >
-              <span>
-                ELEMENTS CHECKED
-              </span>
-
-              <span>
-                {investigated.length}/
-                {CASE2_ELEMENTS.length}
-              </span>
+                OPEN CASE FILE 002
+              </button>
             </div>
+          </motion.section>
+        )}
 
-            <div
-              style={{
-                height: "3px",
-                backgroundColor:
-                  "rgba(201,162,39,0.12)",
-              }}
-            >
+        {/* =====================================================
+            BRIEFING
+        ===================================================== */}
+        {phase === "briefing" && (
+          <motion.section
+            key="briefing"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ maxWidth: 950, margin: "0 auto" }}
+          >
+            <div style={panelStyle}>
               <div
                 style={{
-                  height: "100%",
-                  width: `${
-                    (investigated.length /
-                      CASE2_ELEMENTS.length) *
-                    100
-                  }%`,
-                  backgroundColor:
-                    "#c9a227",
-                  transition:
-                    "width 0.4s ease",
+                  fontSize: "11px",
+                  letterSpacing: "0.22em",
+                  color: "#00e9ff",
                 }}
+              >
+                CASE FILE 002
+              </div>
+
+              <h1 style={{ ...titleStyle, fontSize: "42px" }}>
+                YESTERDAY'S DISASTER
+              </h1>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(180px, 1fr))",
+                  gap: "12px",
+                  marginTop: "24px",
+                }}
+              >
+                <InfoBox label="DIFFICULTY" value="⭐⭐ BEGINNER" />
+                <InfoBox
+                  label="MIL SKILL"
+                  value="CONTEXT VERIFICATION"
+                />
+                <InfoBox label="XP REWARD" value="+150 XP" />
+                <InfoBox
+                  label="BADGE"
+                  value="🖼️ CONTEXT DETECTIVE"
+                />
+              </div>
+
+              <p style={{ lineHeight: 1.9, marginTop: "28px" }}>
+                Early this morning, social media exploded with
+                heartbreaking images of a flooded city.
+              </p>
+
+              <p style={{ lineHeight: 1.9 }}>
+                Thousands of people have already started donating
+                money and warning others to stay indoors.
+              </p>
+
+              <p style={{ lineHeight: 1.9 }}>
+                At first glance, everything looks genuine.
+              </p>
+
+              <p style={{ lineHeight: 1.9 }}>
+                The problem is...
+                <br />
+                <strong style={{ color: "#ffd966" }}>
+                  Something doesn't add up.
+                </strong>
+              </p>
+
+              <p style={{ lineHeight: 1.9 }}>
+                Your mission is simple.
+                <br />
+                Find out whether this image really shows today's
+                disaster.
+              </p>
+
+              <button
+                type="button"
+                style={{
+                  ...buttonStyle,
+                  textAlign: "center",
+                  background: "#c9a227",
+                  color: "#07090f",
+                }}
+                onClick={() => setPhase("evidence")}
+              >
+                ▶ ACCEPT MISSION
+              </button>
+            </div>
+          </motion.section>
+        )}
+
+        {/* =====================================================
+            EVIDENCE
+        ===================================================== */}
+        {phase === "evidence" && (
+          <motion.section
+            key="evidence"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ maxWidth: 1100, margin: "0 auto" }}
+          >
+            <div style={panelStyle}>
+              <div
+                style={{
+                  fontSize: "10px",
+                  letterSpacing: "0.2em",
+                  color: "#00e9ff",
+                }}
+              >
+                EVIDENCE 01 · VIRAL SOCIAL MEDIA POST
+              </div>
+
+              <h1 style={{ ...titleStyle, fontSize: "32px" }}>
+                🚨 BREAKING NEWS
+              </h1>
+
+              <div
+                style={{
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  padding: "22px",
+                  marginTop: "20px",
+                  lineHeight: 1.8,
+                }}
+              >
+                <strong style={{ color: "#fff" }}>
+                  Massive floods have completely submerged Mumbai
+                  overnight.
+                </strong>
+
+                <p>Thousands are trapped.</p>
+
+                <p>
+                  Emergency services have reportedly stopped
+                  responding.
+                </p>
+
+                <p>
+                  Pray for everyone affected. 🙏
+                </p>
+
+                <p>
+                  Please donate using the link below.
+                </p>
+
+                <div
+                  style={{
+                    color: "#888",
+                    fontSize: "11px",
+                    marginTop: "18px",
+                  }}
+                >
+                  💙 124K Likes · 🔁 289K Shares · 💬 41K Comments
+                </div>
+              </div>
+            </div>
+
+            <div style={panelStyle}>
+              <h2 style={titleStyle}>COMMUNITY COMMENTS</h2>
+
+              <Comment
+                name="Sarah J."
+                text="This is heartbreaking..."
+              />
+
+              <Comment
+                name="Aman_07"
+                text="I just donated ₹1000."
+              />
+
+              <Comment
+                name="NewsAlert247"
+                text="Why isn't TV covering this?"
+              />
+
+              <Comment
+                name="Lily"
+                text="My family lives nearby. Can someone confirm if they're safe?"
               />
             </div>
-          </div>
-        </div>
 
-        {/* CENTER */}
+            <div style={panelStyle}>
+              <h2 style={titleStyle}>MISSION OBJECTIVE</h2>
 
-        <div className="flex-1 flex flex-col overflow-hidden">
+              <p style={{ lineHeight: 1.8 }}>
+                Don't investigate the caption.
+              </p>
 
-          <div
-            className="flex items-center justify-between px-4 py-2"
-            style={{
-              borderBottom:
-                "1px solid rgba(201,162,39,0.2)",
-            }}
-          >
-            <div
-              style={{
-                fontFamily:
-                  "Special Elite, serif",
-                fontSize: "22px",
-                color: "#ffd966",
-                letterSpacing: "0.09em",
-              }}
-            >
-              {CASE2_INFO.exhibit}
+              <p style={{ lineHeight: 1.8 }}>
+                Investigate the{" "}
+                <strong style={{ color: "#ffd966" }}>
+                  photograph.
+                </strong>
+              </p>
             </div>
 
-            <div
-              style={{
-                fontSize: "9.5px",
-                color: "#c9b882",
-                letterSpacing: "0.15em",
-              }}
-            >
-              CASE {CASE2_INFO.caseId} ·{" "}
-              {CASE2_INFO.category}
-            </div>
-          </div>
+            <div style={panelStyle}>
+              <h2 style={titleStyle}>
+                INVESTIGATION TOOLS
+              </h2>
 
-          <div
-            className="flex-1 relative overflow-hidden"
-            onClick={() =>
-              setSelectedElement(null)
-            }
-          >
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(135deg,#06080e 0%,#090a18 50%,#06080e 100%)",
-              }}
-            />
-
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundColor:
-                  "rgba(5,8,18,0.35)",
-              }}
-            />
-
-            {/* EXHIBIT LABEL */}
-
-            <div
-              className="absolute top-3 left-3"
-              style={{
-                fontSize: "10px",
-                color: "#ffd966",
-                letterSpacing: "0.12em",
-              }}
-            >
-              [EXHIBIT-02 ·{" "}
-              {CASE2_INFO.account} ·{" "}
-              {CASE2_INFO.time} · PORT WATCH]
-            </div>
-
-            {/* SOCIAL POST */}
-
-            <div
-              className="absolute inset-0 flex items-center justify-center"
-              style={{
-                padding: "20px",
-              }}
-            >
-              <div
-                onClick={(event) =>
-                  event.stopPropagation()
-                }
-                style={{
-                  backgroundColor:
-                    "rgba(11,13,22,0.94)",
-                  border:
-                    "1px solid rgba(201,162,39,0.14)",
-                  padding:
-                    "18px 20px",
-                  maxWidth: "400px",
-                  width: "100%",
-                  boxShadow:
-                    "0 8px 32px rgba(0,0,0,0.65)",
-                }}
-              >
-                {/* ACCOUNT */}
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "9px",
-                    marginBottom: "13px",
-                    paddingBottom: "10px",
-                    borderBottom:
-                      "1px solid rgba(201,162,39,0.08)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "28px",
-                      height: "28px",
-                      border:
-                        "1px solid rgba(201,162,39,0.3)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent:
-                        "center",
-                      backgroundColor:
-                        "rgba(201,162,39,0.07)",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontFamily:
-                          "Special Elite, serif",
-                        color: "#c9a227",
-                      }}
-                    >
-                      H
-                    </span>
-                  </div>
-
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "10.5px",
-                        color: "#d0c8a8",
-                      }}
-                    >
-                      {renderElement(
-                        CASE2_ELEMENTS.find(
-                          (item) =>
-                            item.id ===
-                            "source"
-                        )!
-                      )}
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize: "7.5px",
-                        color:
-                          "rgba(201,162,39,0.3)",
-                        marginTop: "2px",
-                      }}
-                    >
-                      PORT WATCH ·
-                      INDEPENDENT FEED
-                    </div>
-                  </div>
-                </div>
-
-                {/* HEADLINE */}
-
-                <div
-                  style={{
-                    fontFamily:
-                      "Special Elite, serif",
-                    fontSize: "17px",
-                    color: "#ece4cc",
-                    lineHeight: 1.3,
-                    marginBottom: "14px",
-                  }}
-                >
-                  {renderElement(
-                    CASE2_ELEMENTS.find(
-                      (item) =>
-                        item.id ===
-                        "headline"
-                    )!
-                  )}
-                </div>
-
-                {/* CLAIMS */}
-
-                <div
-                  style={{
-                    fontSize: "10px",
-                    color: "#c2baa0",
-                    lineHeight: 2,
-                    marginBottom: "12px",
-                  }}
-                >
-                  {[
-                    "claim-1",
-                    "claim-2",
-                    "claim-3",
-                    "claim-4",
-                  ].map((id) => {
-                    const element =
-                      CASE2_ELEMENTS.find(
-                        (item) =>
-                          item.id === id
-                      );
-
-                    if (!element)
-                      return null;
-
-                    return (
-                      <div
-                        key={id}
-                        style={{
-                          display: "flex",
-                          gap: "7px",
-                        }}
-                      >
-                        <span
-                          style={{
-                            color:
-                              "rgba(201,162,39,0.35)",
-                          }}
-                        >
-                          ◆
-                        </span>
-
-                        {renderElement(
-                          element
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* CTA */}
-
-                <div
-                  style={{
-                    fontSize: "10.5px",
-                    color: "#cfc8a8",
-                    fontStyle: "italic",
-                    marginBottom: "13px",
-                  }}
-                >
-                  {renderElement(
-                    CASE2_ELEMENTS.find(
-                      (item) =>
-                        item.id === "cta"
-                    )!
-                  )}
-                </div>
-
-                {/* ENGAGEMENT */}
-
-                <div
-                  style={{
-                    borderTop:
-                      "1px solid rgba(201,162,39,0.08)",
-                    paddingTop: "10px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "9px",
-                      color:
-                        "rgba(201,162,39,0.45)",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    ♥{" "}
-                    {renderElement(
-                      CASE2_ELEMENTS.find(
-                        (item) =>
-                          item.id ===
-                          "engagement"
-                      )!
-                    )}
-                  </div>
-
-                  {/* COMMENT */}
-
-                  <div
-                    style={{
-                      fontSize: "9px",
-                      color:
-                        "rgba(196,188,165,0.6)",
-                      borderLeft:
-                        "2px solid rgba(201,162,39,0.16)",
-                      paddingLeft: "8px",
-                      lineHeight: 1.65,
-                    }}
-                  >
-                    <span
-                      style={{
-                        color:
-                          "rgba(201,162,39,0.3)",
-                      }}
-                    >
-                      user_comment:{" "}
-                    </span>
-
-                    “
-                    {renderElement(
-                      CASE2_ELEMENTS.find(
-                        (item) =>
-                          item.id ===
-                          "comment"
-                      )!
-                    )}
-                    ”
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* TOOL OVERLAY */}
-
-            {activeTool && (
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  border:
-                    "1px solid rgba(201,162,39,0.12)",
-                }}
-              >
-                <div
-                  className="absolute top-4 right-4"
-                  style={{
-                    fontSize: "9px",
-                    color:
-                      CASE2_TOOLS.find(
-                        (tool) =>
-                          tool.id ===
-                          activeTool
-                      )?.color,
-                    border:
-                      "1px solid rgba(201,162,39,0.25)",
-                    padding:
-                      "7px 10px",
-                    backgroundColor:
-                      "rgba(7,9,15,0.85)",
-                    lineHeight: 1.8,
-                  }}
-                >
-                  {getCase2Finding(
-                    activeTool,
-                    selectedElement
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div
-              className="absolute bottom-3 right-3"
-              style={{
-                fontSize: "9.5px",
-                color: "#a89968",
-              }}
-            >
-              MAGNIFICATION ACTIVE ·
-              MOVE TO INSPECT
-            </div>
-          </div>
-
-          {/* SELECTED ELEMENT ACTIONS */}
-
-          <AnimatePresence mode="wait">
-            {selectedPost ? (
-              <motion.div
-                initial={{
-                  height: 0,
-                  opacity: 0,
-                }}
-                animate={{
-                  height: "auto",
-                  opacity: 1,
-                }}
-                exit={{
-                  height: 0,
-                  opacity: 0,
-                }}
-                style={{
-                  borderTop:
-                    "1px solid rgba(201,162,39,0.35)",
-                  backgroundColor:
-                    "rgba(201,162,39,0.07)",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  className="px-4 py-2"
-                >
-                  <div
-                    style={{
-                      fontSize: "7.5px",
-                      color:
-                        "rgba(201,162,39,0.45)",
-                      letterSpacing:
-                        "0.22em",
-                      marginBottom: "5px",
-                    }}
-                  >
-                    SELECTED:{" "}
-                    {selectedPost.content
-                      .toUpperCase()
-                      .slice(0, 55)}
-                  </div>
-
-                  <div className="flex flex-col">
-                    {selectedPost.directions.map(
-                      (direction, index) => (
-                        <button
-                          key={index}
-                          onClick={() =>
-                            markInvestigated(
-                              selectedPost.id
-                            )
-                          }
-                          style={{
-                            fontFamily:
-                              "Courier Prime, monospace",
-                            fontSize: "9px",
-                            color: "#c9b882",
-                            background:
-                              "none",
-                            border: "none",
-                            cursor:
-                              "pointer",
-                            textAlign:
-                              "left",
-                            padding:
-                              "2px 0",
-                          }}
-                        >
-                          <span
-                            style={{
-                              color:
-                                "rgba(201,162,39,0.4)",
-                              marginRight:
-                                "7px",
-                            }}
-                          >
-                            {index + 1}.
-                          </span>
-
-                          {direction}
-                        </button>
-                      )
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            ) : activeTool ? (
               <div
                 style={{
-                  borderTop:
-                    "1px solid rgba(201,162,39,0.2)",
-                  backgroundColor:
-                    "rgba(201,162,39,0.04)",
-                  padding:
-                    "10px 16px",
-                  fontSize: "9px",
-                  color:
-                    CASE2_TOOLS.find(
-                      (tool) =>
-                        tool.id ===
-                        activeTool
-                    )?.color,
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(230px, 1fr))",
+                  gap: "10px",
+                  marginTop: "18px",
                 }}
               >
-                {getCase2Finding(
-                  activeTool,
-                  null
-                )}
-              </div>
-            ) : null}
-          </AnimatePresence>
-        </div>
-
-        {/* RIGHT TOOL PANEL */}
-
-        <div
-          style={{
-            width: "220px",
-            flexShrink: 0,
-            borderLeft:
-              "1px solid rgba(201,162,39,0.2)",
-          }}
-          className="flex flex-col"
-        >
-          <div
-            className="px-3 py-2"
-            style={{
-              borderBottom:
-                "1px solid rgba(201,162,39,0.2)",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "10px",
-                letterSpacing:
-                  "0.25em",
-                color: "#e6d9ac",
-              }}
-            >
-              INVESTIGATOR&apos;S KIT
-            </div>
-          </div>
-
-          <div
-            className="flex flex-col gap-2 p-2 flex-1"
-          >
-            {CASE2_TOOLS.map(
-              (tool) => {
-                const active =
-                  activeTool ===
-                  tool.id;
-
-                return (
+                {CLUES.map((clue) => (
                   <button
-                    key={tool.id}
-                    onClick={() =>
-                      setActiveTool(
-                        active
-                          ? null
-                          : tool.id
-                      )
-                    }
-                    className="text-left"
+                    type="button"
+                    key={clue.id}
+                    onClick={() => discoverClue(clue)}
                     style={{
-                      border: `1px solid ${
-                        active
-                          ? tool.color
-                          : "rgba(201,162,39,0.22)"
-                      }`,
-                      backgroundColor:
-                        active
-                          ? `${tool.color}10`
-                          : "rgba(8,10,18,0.8)",
-                      padding:
-                        "9px 10px",
-                      cursor:
-                        "pointer",
+                      ...buttonStyle,
+                      border:
+                        selectedClue === clue.id
+                          ? "1px solid #c9a227"
+                          : "1px solid rgba(201,162,39,0.25)",
+                      background:
+                        selectedClue === clue.id
+                          ? "rgba(201,162,39,0.12)"
+                          : "rgba(201,162,39,0.03)",
                     }}
                   >
-                    <div className="flex items-center gap-2">
-                      <span
-                        style={{
-                          fontSize: "9px",
-                          color:
-                            tool.color,
-                        }}
-                      >
-                        {tool.symbol}
-                      </span>
+                    {investigated.includes(clue.id) ? "✓ " : ""}
+                    {clue.title}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                      <span
+            {selectedClue && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={panelStyle}
+              >
+                {(() => {
+                  const clue = CLUES.find(
+                    (item) => item.id === selectedClue
+                  );
+
+                  if (!clue) {
+                    return null;
+                  }
+
+                  return (
+                    <>
+                      <div
                         style={{
                           fontSize: "10px",
-                          letterSpacing:
-                            "0.12em",
-                          color: active
-                            ? tool.color
-                            : "#d8c88a",
+                          letterSpacing: "0.2em",
+                          color: "#00e9ff",
                         }}
                       >
-                        {tool.label}
-                      </span>
-                    </div>
+                        {clue.category}
+                      </div>
 
-                    {active && (
+                      <h2 style={titleStyle}>
+                        {clue.title}
+                      </h2>
+
+                      <p style={{ lineHeight: 1.9 }}>
+                        {clue.description}
+                      </p>
+
                       <div
                         style={{
-                          fontSize: "9px",
-                          color:
-                            tool.color,
-                          lineHeight: 1.7,
-                          marginTop:
-                            "6px",
+                          borderLeft:
+                            "3px solid #c9a227",
+                          paddingLeft: "14px",
+                          color: "#ffd966",
+                          marginTop: "18px",
                         }}
                       >
-                        {getCase2Finding(
-                          tool.id,
-                          selectedElement
-                        )}
+                        NOTEBOOK UPDATED
+                        <br />
+                        ✓ {clue.finding}
                       </div>
-                    )}
-                  </button>
-                );
-              }
+                    </>
+                  );
+                })()}
+              </motion.div>
             )}
-          </div>
 
-          <div
-            className="p-3"
-            style={{
-              borderTop:
-                "1px solid rgba(201,162,39,0.18)",
-            }}
+            {investigated.length === CLUES.length && (
+              <button
+                type="button"
+                style={{
+                  ...buttonStyle,
+                  textAlign: "center",
+                  background: "#c9a227",
+                  color: "#07090f",
+                }}
+                onClick={() => setPhase("decision")}
+              >
+                CONTINUE TO FINAL DECISION
+              </button>
+            )}
+          </motion.section>
+        )}
+
+        {/* =====================================================
+            DECISION
+        ===================================================== */}
+        {phase === "decision" && (
+          <motion.section
+            key="decision"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ maxWidth: 900, margin: "0 auto" }}
+          >
+            <div style={panelStyle}>
+              <div
+                style={{
+                  fontSize: "10px",
+                  letterSpacing: "0.2em",
+                  color: "#00e9ff",
+                }}
+              >
+                FINAL DECISION
+              </div>
+
+              <h1 style={{ ...titleStyle, fontSize: "34px" }}>
+                WHAT SHOULD YOU DO?
+              </h1>
+
+              <DecisionOption
+                selected={selectedVerdict === 0}
+                onClick={() => setSelectedVerdict(0)}
+                text="Share the post to warn everyone."
+              />
+
+              <DecisionOption
+                selected={selectedVerdict === 1}
+                onClick={() => setSelectedVerdict(1)}
+                text="Donate immediately."
+              />
+
+              <DecisionOption
+                selected={selectedVerdict === 2}
+                onClick={() => setSelectedVerdict(2)}
+                text="Verify the disaster through trusted news and official emergency agencies before sharing or donating."
+              />
+
+              <DecisionOption
+                selected={selectedVerdict === 3}
+                onClick={() => setSelectedVerdict(3)}
+                text="Ignore every disaster photo online."
+              />
+
+              <button
+                type="button"
+                disabled={selectedVerdict === null}
+                onClick={submitVerdict}
+                style={{
+                  ...buttonStyle,
+                  textAlign: "center",
+                  background:
+                    selectedVerdict === 2
+                      ? "#c9a227"
+                      : "rgba(201,162,39,0.08)",
+                  color:
+                    selectedVerdict === 2
+                      ? "#07090f"
+                      : "#777",
+                  cursor:
+                    selectedVerdict === null
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+              >
+                SUBMIT FINAL DECISION
+              </button>
+            </div>
+          </motion.section>
+        )}
+
+        {/* =====================================================
+            DEBRIEF
+        ===================================================== */}
+        {phase === "debrief" && (
+          <motion.section
+            key="debrief"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ maxWidth: 900, margin: "0 auto" }}
+          >
+            <div style={panelStyle}>
+              <div
+                style={{
+                  color: "#00e9ff",
+                  fontSize: "10px",
+                  letterSpacing: "0.2em",
+                }}
+              >
+                MISSION DEBRIEF
+              </div>
+
+              <h1 style={{ ...titleStyle, fontSize: "36px" }}>
+                CASE SOLVED
+              </h1>
+
+              <p style={{ lineHeight: 1.9 }}>
+                Excellent work, Detective.
+              </p>
+
+              <p style={{ lineHeight: 1.9 }}>
+                This mission teaches one of the most common
+                misinformation techniques:
+              </p>
+
+              <h2 style={{ ...titleStyle, fontSize: "24px" }}>
+                USING A REAL IMAGE IN THE WRONG CONTEXT
+              </h2>
+
+              <p style={{ lineHeight: 1.9 }}>
+                The photograph itself wasn't fake.
+              </p>
+
+              <p style={{ lineHeight: 1.9 }}>
+                The story attached to it was.
+              </p>
+
+              <p style={{ lineHeight: 1.9 }}>
+                Old images are often reshared during new disasters
+                because they trigger strong emotions and encourage
+                people to react quickly.
+              </p>
+
+              <p style={{ lineHeight: 1.9 }}>
+                Before sharing disaster photos...
+              </p>
+
+              <p
+                style={{
+                  color: "#ffd966",
+                  fontFamily: "Special Elite, serif",
+                  fontSize: "22px",
+                }}
+              >
+                "When was this image actually taken?"
+              </p>
+
+              <button
+                type="button"
+                style={{
+                  ...buttonStyle,
+                  textAlign: "center",
+                  background: "#c9a227",
+                  color: "#07090f",
+                }}
+                onClick={() => setPhase("quiz")}
+              >
+                CONTINUE TO QUIZ
+              </button>
+            </div>
+          </motion.section>
+        )}
+
+        {/* =====================================================
+            QUIZ
+        ===================================================== */}
+        {phase === "quiz" && (
+          <motion.section
+            key={`quiz-${quizIndex}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ maxWidth: 900, margin: "0 auto" }}
+          >
+            <div style={panelStyle}>
+              <div
+                style={{
+                  fontSize: "10px",
+                  letterSpacing: "0.2em",
+                  color: "#00e9ff",
+                }}
+              >
+                QUICK QUIZ · {quizIndex + 1}/
+                {QUIZ_ANSWERS.length}
+              </div>
+
+              <h1 style={{ ...titleStyle, fontSize: "30px" }}>
+                {QUIZ_ANSWERS[quizIndex].question}
+              </h1>
+
+              {QUIZ_ANSWERS[quizIndex].options.map(
+                (option, index) => (
+                  <DecisionOption
+                    key={option}
+                    selected={quizAnswer === index}
+                    onClick={() => answerQuiz(index)}
+                    text={option}
+                  />
+                )
+              )}
+
+              {quizAnswer !== null && (
+                <div
+                  style={{
+                    marginTop: "18px",
+                    padding: "14px",
+                    border:
+                      quizAnswer ===
+                      QUIZ_ANSWERS[quizIndex].correct
+                        ? "1px solid rgba(0,233,255,0.4)"
+                        : "1px solid rgba(255,100,70,0.4)",
+                    color:
+                      quizAnswer ===
+                      QUIZ_ANSWERS[quizIndex].correct
+                        ? "#00e9ff"
+                        : "#ff9b7a",
+                  }}
+                >
+                  {quizAnswer ===
+                  QUIZ_ANSWERS[quizIndex].correct
+                    ? "✓ CORRECT"
+                    : "✕ NOT QUITE — REVIEW THE EVIDENCE."}
+                </div>
+              )}
+
+              <button
+                type="button"
+                disabled={quizAnswer === null}
+                onClick={nextQuizQuestion}
+                style={{
+                  ...buttonStyle,
+                  textAlign: "center",
+                  background:
+                    quizAnswer === null
+                      ? "rgba(201,162,39,0.05)"
+                      : "#c9a227",
+                  color:
+                    quizAnswer === null
+                      ? "#666"
+                      : "#07090f",
+                }}
+              >
+                {quizIndex === QUIZ_ANSWERS.length - 1
+                  ? "FINISH QUIZ"
+                  : "NEXT QUESTION"}
+              </button>
+            </div>
+          </motion.section>
+        )}
+
+        {/* =====================================================
+            REWARDS
+        ===================================================== */}
+        {phase === "rewards" && (
+          <motion.section
+            key="rewards"
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            style={{ maxWidth: 900, margin: "0 auto" }}
           >
             <div
               style={{
-                fontSize: "9.5px",
-                color: "#a89968",
-                lineHeight: 1.8,
-                letterSpacing:
-                  "0.12em",
+                ...panelStyle,
+                textAlign: "center",
+                padding: "50px 30px",
               }}
             >
-              CASE NO.{" "}
-              {CASE2_INFO.caseId}
-              <br />
-              DETECTIVE: R. CHEN
-              <br />
-              STATUS: ACTIVE
+              <div
+                style={{
+                  fontSize: "12px",
+                  letterSpacing: "0.3em",
+                  color: "#00e9ff",
+                }}
+              >
+                🎉 MISSION COMPLETE
+              </div>
+
+              <h1
+                style={{
+                  ...titleStyle,
+                  fontSize: "46px",
+                  marginTop: "18px",
+                }}
+              >
+                YESTERDAY'S DISASTER
+              </h1>
+
+              <div
+                style={{
+                  fontSize: "28px",
+                  color: "#ffd966",
+                  marginTop: "28px",
+                }}
+              >
+                +150 XP
+              </div>
+
+              <div
+                style={{
+                  fontSize: "20px",
+                  marginTop: "18px",
+                }}
+              >
+                🏅 Context Detective
+              </div>
+
+              <div
+                style={{
+                  color: "#888",
+                  fontSize: "11px",
+                  letterSpacing: "0.15em",
+                  marginTop: "18px",
+                }}
+              >
+                LEVEL PROGRESS · 26%
+              </div>
+
+              <button
+                type="button"
+                style={{
+                  ...buttonStyle,
+                  width: "auto",
+                  minWidth: "250px",
+                  textAlign: "center",
+                  background: "#c9a227",
+                  color: "#07090f",
+                  margin: "30px auto 0",
+                }}
+                onClick={() => setPhase("briefing")}
+              >
+                RETURN TO CASE FILE
+              </button>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* VERDICT BAR */}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(4, 1fr)",
-          height: "90px",
-          flexShrink: 0,
-          borderTop:
-            "1px solid rgba(201,162,39,0.25)",
-        }}
-      >
-        {(
-          [
-            ["TRUST", "#00ff6a"],
-            ["VERIFY", "#f59e0b"],
-            ["REJECT", "#ef4444"],
-            ["REPORT", "#00e9ff"],
-          ] as const
-        ).map(
-          ([label, color]) => (
-            <button
-              key={label}
-              onClick={() =>
-                handleVerdict(label)
-              }
-              style={{
-                backgroundColor:
-                  "#07090f",
-                border: "none",
-                borderRight:
-                  "1px solid rgba(201,162,39,0.14)",
-                cursor: "pointer",
-                color,
-                fontFamily:
-                  "Special Elite, serif",
-                fontSize: "25px",
-                letterSpacing:
-                  "0.12em",
-              }}
-            >
-              <div>{label}</div>
-
-              <div
-                style={{
-                  fontFamily:
-                    "Courier Prime, monospace",
-                  fontSize: "8px",
-                  color: "#b8a878",
-                  marginTop:
-                    "8px",
-                  letterSpacing:
-                    "0.18em",
-                }}
-              >
-                STAMP TO RECORD
-              </div>
-            </button>
-          )
-        )}
-      </div>
-
-      {/* VERDICT CONFIRMATION */}
-
-      <AnimatePresence>
-        {showStamp && (
-          <motion.div
-            initial={{
-              opacity: 0,
-            }}
-            animate={{
-              opacity: 1,
-            }}
-            exit={{
-              opacity: 0,
-            }}
-            className="absolute inset-0 flex items-center justify-center"
-            style={{
-              zIndex: 500,
-              backgroundColor:
-                "rgba(3,5,12,0.88)",
-            }}
-          >
-            <motion.div
-              initial={{
-                scale: 0.85,
-                rotate: -4,
-              }}
-              animate={{
-                scale: 1,
-                rotate: 0,
-              }}
-              style={{
-                border: `2px solid ${
-                  showStamp ===
-                  "TRUST"
-                    ? "#00ff6a"
-                    : showStamp ===
-                      "VERIFY"
-                    ? "#f59e0b"
-                    : showStamp ===
-                      "REJECT"
-                    ? "#ef4444"
-                    : "#00e9ff"
-                }`,
-                padding:
-                  "35px 55px",
-                textAlign:
-                  "center",
-                backgroundColor:
-                  "#07090f",
-                boxShadow:
-                  "0 0 40px rgba(201,162,39,0.15)",
-              }}
-            >
-              <div
-                style={{
-                  fontFamily:
-                    "Special Elite, serif",
-                  fontSize: "48px",
-                  color:
-                    showStamp ===
-                    "TRUST"
-                      ? "#00ff6a"
-                      : showStamp ===
-                        "VERIFY"
-                      ? "#f59e0b"
-                      : showStamp ===
-                        "REJECT"
-                      ? "#ef4444"
-                      : "#00e9ff",
-                  letterSpacing:
-                    "0.12em",
-                }}
-              >
-                {showStamp}
-              </div>
-
-              <div
-                style={{
-                  marginTop:
-                    "10px",
-                  fontSize:
-                    "10px",
-                  color:
-                    "#b8a878",
-                  letterSpacing:
-                    "0.16em",
-                }}
-              >
-                RECORD THIS VERDICT?
-              </div>
-
-              <div
-                className="flex gap-3 justify-center"
-                style={{
-                  marginTop:
-                    "25px",
-                }}
-              >
-                <button
-                  onClick={
-                    finishVerdict
-                  }
-                  style={{
-                    border:
-                      "1px solid #c9a227",
-                    background:
-                      "transparent",
-                    color:
-                      "#ffd966",
-                    padding:
-                      "8px 18px",
-                    cursor:
-                      "pointer",
-                    fontFamily:
-                      "Courier Prime, monospace",
-                  }}
-                >
-                  CONFIRM
-                </button>
-
-                <button
-                  onClick={() =>
-                    setShowStamp(
-                      null
-                    )
-                  }
-                  style={{
-                    border:
-                      "1px solid rgba(201,162,39,0.3)",
-                    background:
-                      "transparent",
-                    color:
-                      "#8c805d",
-                    padding:
-                      "8px 18px",
-                    cursor:
-                      "pointer",
-                    fontFamily:
-                      "Courier Prime, monospace",
-                  }}
-                >
-                  CANCEL
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
+          </motion.section>
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/* =========================================================
+   SMALL COMPONENTS
+========================================================= */
+
+function InfoBox({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div
+      style={{
+        border: "1px solid rgba(201,162,39,0.2)",
+        padding: "14px",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "9px",
+          color: "#777",
+          letterSpacing: "0.15em",
+          marginBottom: "7px",
+        }}
+      >
+        {label}
+      </div>
+
+      <div
+        style={{
+          color: "#ffd966",
+          fontSize: "11px",
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function Comment({
+  name,
+  text,
+}: {
+  name: string;
+  text: string;
+}) {
+  return (
+    <div
+      style={{
+        borderBottom:
+          "1px solid rgba(201,162,39,0.12)",
+        padding: "13px 0",
+      }}
+    >
+      <strong style={{ color: "#ffd966" }}>
+        {name}
+      </strong>
+
+      <div
+        style={{
+          marginTop: "5px",
+          lineHeight: 1.6,
+        }}
+      >
+        {text}
+      </div>
+    </div>
+  );
+}
+
+function DecisionOption({
+  selected,
+  onClick,
+  text,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  text: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        width: "100%",
+        display: "block",
+        textAlign: "left",
+        padding: "15px 18px",
+        marginTop: "10px",
+        border: selected
+          ? "1px solid #c9a227"
+          : "1px solid rgba(201,162,39,0.2)",
+        background: selected
+          ? "rgba(201,162,39,0.12)"
+          : "rgba(201,162,39,0.03)",
+        color: selected
+          ? "#ffd966"
+          : "#c9b882",
+        fontFamily: "Courier Prime, monospace",
+        lineHeight: 1.6,
+        cursor: "pointer",
+      }}
+    >
+      {selected ? "◉ " : "○ "}
+      {text}
+    </button>
   );
 }
