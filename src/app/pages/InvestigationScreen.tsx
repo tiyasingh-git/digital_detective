@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { AnimatePresence } from "motion/react";
 
 import type { Tool, Verdict, DiscoveredFinding } from "../types";
-import { TOOL_FINDINGS } from "../data/investigationData";
+import { useCaseContent } from "../context/CaseContentContext";
 import { LeftPanel } from "../components/investigation/LeftPanel";
 import { CenterPanel } from "../components/investigation/CenterPanel";
 import { StampBar } from "../components/investigation/StampBar";
@@ -18,10 +18,11 @@ export function InvestigationScreen({ onVerdictFinal, onDiscoverFinding }: {
   const [investigated, setInvestigated] = useState<Set<string>>(new Set());
   const [stampVerdict, setStampVerdict] = useState<Verdict>(null);
   const [showStamp, setShowStamp] = useState(false);
+  const { content } = useCaseContent();
 
   useEffect(() => {
     if (!activeTool || !selectedElement) return;
-    const text = TOOL_FINDINGS[activeTool]?.[selectedElement];
+    const text = content.toolFindings[activeTool]?.[selectedElement];
     if (!text) return;
     onDiscoverFinding({ elementId: selectedElement, toolId: activeTool, text });
   }, [activeTool, selectedElement]); // eslint-disable-line react-hooks/exhaustive-deps

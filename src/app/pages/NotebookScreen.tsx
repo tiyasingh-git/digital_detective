@@ -2,7 +2,8 @@ import { useState, useMemo, useCallback } from "react";
 import { motion } from "motion/react";
 
 import type { CaseRecord, Verdict } from "../types";
-import { STAMP_PALETTE, TOOLS_DATA } from "../data/investigationData";
+import { STAMP_PALETTE } from "../data/investigationData";
+import { useCaseContent } from "../context/CaseContentContext";
 import { CASES_CATALOG } from "../data/casesData";
 
 export const NOTE_ENTRIES = [
@@ -72,6 +73,7 @@ export function NotebookScreen({ cases, onUpdateNotes, onBack }: {
   onBack: () => void;
 }) {
   const [currentPage, setCurrentPage] = useState<"index" | string>("index");
+  const { content } = useCaseContent();
   const [prevPage, setPrevPage] = useState<"index" | string | null>(null);
   const [pageDir, setPageDir] = useState<"forward" | "back">("forward");
   const [shadowKey, setShadowKey] = useState(0);
@@ -254,7 +256,7 @@ export function NotebookScreen({ cases, onUpdateNotes, onBack }: {
     const sp = STAMP_PALETTE[cr.finalVerdict ?? "VERIFY"];
     const baseEvidence = nbData?.evidenceItems ?? [];
     const extraEvidence = (cr.discoveredFindings ?? []).map(f => {
-      const toolLabel = TOOLS_DATA.find(t => t.id === f.toolId)?.label ?? f.toolId.toUpperCase();
+      const toolLabel = content.toolsData.find(t => t.id === f.toolId)?.label ?? f.toolId.toUpperCase();
       return `[${toolLabel}] ${f.text}`;
     });
     const evidenceItems = [...baseEvidence, ...extraEvidence];
