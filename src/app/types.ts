@@ -1,6 +1,6 @@
 // Shared type definitions used across the app.
 
-export type Screen = "boot" | "splash" | "recruitment-letter" | "profile-creation" | "mira-onboarding" | "main-menu" | "case-select" | "mission-briefing" | "investigation" | "notebook" | "evidence-wall" | "case-resolution" | "records" | "settings" | "profile";
+export type Screen = "boot" | "splash" | "recruitment-letter" | "profile-creation" | "mira-onboarding" | "main-menu" | "case-select" | "mission-briefing" | "investigation" | "notebook" | "evidence-wall" | "case-resolution" | "records" | "skill-cards" | "settings" | "profile";
 
 
 export type Tool = "scanner" | "timeline" | "camera" | "emotion" | "bias" | "metadata" | "verify" | null;
@@ -20,6 +20,7 @@ export interface CaseRecord {
   verdictsGiven: Verdict[]; wallSelection: number | null; timeRemainingSec: number;
   finalVerdict: Verdict; notebookNotes: string;
   discoveredFindings: DiscoveredFinding[];
+  finalScore?: number; completedAt?: string;
 }
 
 

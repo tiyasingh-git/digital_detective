@@ -5,6 +5,7 @@ import type { Screen, CaseRecord, PlayerProfile, SettingsState, CaseStatus } fro
 import { MenuAnimatedBg } from "../components/mainmenu/MenuAnimatedBg";
 import { VERDICTS } from "../data/investigationData";
 import { CASES_CATALOG } from "../data/casesData";
+import { computeProfileStats } from "../lib/profileStats";
 
 // Cork BG decoration items (behind menu, non-interactive)
 export const BG_PINS = [
@@ -194,9 +195,7 @@ export function MainMenuScreen({ onNavigate, cases, reduceMotion, settings, prof
   const statusLabel = (s: CaseStatus) =>
     s === "available" ? "AVAILABLE" : s === "in-progress" ? "ACTIVE" : s === "closed-solved" ? "SOLVED" : s === "closed-cold" ? "COLD" : "LOCKED";
 
-  const solvedCount = cases.filter(c => c.status === "closed-solved").length;
-  const xp = solvedCount * 1200 + cases.filter(c => c.status === "closed-cold").length * 200;
-  const rank = solvedCount >= 5 ? "LEAD DETECTIVE" : solvedCount >= 3 ? "SENIOR DET." : solvedCount >= 1 ? "JUNIOR DET." : "TRAINEE";
+  const { solvedCount, xp, rank } = computeProfileStats(cases);
 
   const hubItems = [
     { label: "MISSION BOARD",     color: "#ffd966", isPrimary: true,
@@ -206,8 +205,10 @@ export function MainMenuScreen({ onNavigate, cases, reduceMotion, settings, prof
       onClick: () => onNavigate("case-select"),  disabled: false, showDot: !!activeCase },
     { label: "NOTEBOOK",          color: "#b8a878", isPrimary: false, sub: "CASE ARCHIVE · YOUR NOTES",
       onClick: () => onNavigate("notebook"),     disabled: false, showDot: false },
-    { label: "DETECTIVE RECORDS", color: "#b8a878", isPrimary: false, sub: "COMPLETED CASES · ACHIEVEMENTS",
+    { label: "DETECTIVE RECORDS", color: "#b8a878", isPrimary: false, sub: "COMPLETED CASES · SCORES",
       onClick: () => onNavigate("records"),      disabled: false, showDot: false },
+    { label: "SKILL CARDS",       color: "#b8a878", isPrimary: false, sub: "FIELD MANUAL · TECHNIQUES",
+      onClick: () => onNavigate("skill-cards"),  disabled: false, showDot: false },
     { label: "EVIDENCE WALL",     color: "#b8a878", isPrimary: false, sub: "CASE CONNECTIONS · THEORY BOARD",
       onClick: () => onNavigate("evidence-wall"), disabled: false, showDot: false },
     { label: "PROFILE",           color: "#b8a878", isPrimary: false, sub: "DETECTIVE RECORD · ACHIEVEMENTS",
