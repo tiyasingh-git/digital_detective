@@ -31,7 +31,9 @@ import { NotebookScreen } from "./pages/NotebookScreen";
 import { EvidenceWallScreen } from "./pages/EvidenceWallScreen";
 import { CaseResolutionScreen } from "./pages/CaseResolutionScreen";
 import { RecordsScreen } from "./pages/RecordsScreen";
+import { SkillCardsScreen } from "./pages/SkillCardsScreen";
 import { SettingsScreen } from "./pages/SettingsScreen";
+import { computeOverallScore } from "./lib/scoring";
 
 
 export const SCREENS: {
@@ -46,26 +48,9 @@ export const SCREENS: {
 
 /* =========================================================
    PRE-GAME SCREENS
+========================================================= */
 
-export const PRE_GAME: Screen[] = [
-  "boot",
-  "splash",
-  "recruitment-letter",
-  "profile-creation",
-  "mira-onboarding",
-  "main-menu",
-  "case-select",
-  "mission-briefing",
-  "records",
-  "settings",
-  "profile",
-];
-export const SCREENS: { id: Screen; label: string }[] = [
-  { id: "investigation", label: "CASE FILE" },
-];
-
-
-export const PRE_GAME: Screen[] = ["boot", "splash", "recruitment-letter", "profile-creation", "mira-onboarding", "main-menu", "case-select", "mission-briefing", "records", "settings", "profile"];
+export const PRE_GAME: Screen[] = ["boot", "splash", "recruitment-letter", "profile-creation", "mira-onboarding", "main-menu", "case-select", "mission-briefing", "records", "skill-cards", "settings", "profile"];
 
 /* =========================================================
    APP
@@ -138,11 +123,16 @@ export default function App() {
 
   const handleVerdictFinal = useCallback((v: NonNullable<Verdict>, investigated: string[]) => {
     if (!activeCaseId) return;
-    updateCase(activeCaseId, r => ({ ...r, status: "closed-solved", finalVerdict: v, lastScreen: "case-resolution" }));
+    const notes = cases.find(c => c.caseId === activeCaseId)?.notebookNotes ?? "";
+    const score = computeOverallScore(investigated, notes);
+    updateCase(activeCaseId, r => ({
+      ...r, status: "closed-solved", finalVerdict: v, lastScreen: "case-resolution",
+      finalScore: score, completedAt: new Date().toISOString(),
+    }));
     setFinalVerdict(v);
     setResolutionInvestigated(investigated);
     setScreen("case-resolution");
-  }, [activeCaseId, updateCase]);
+  }, [activeCaseId, cases, updateCase]);
 
   const handleBackToBureau = useCallback(() => {
     setFinalVerdict(null);
@@ -279,11 +269,12 @@ export default function App() {
                 onBack={() => { setPendingCaseId(null); setScreen("case-select"); }}
               />
             )}
-            {screen === "records"         && <RecordsScreen onBack={handleBackToMenu} />}
+            {screen === "records"         && <RecordsScreen onBack={handleBackToMenu} cases={cases} />}
+            {screen === "skill-cards"     && <SkillCardsScreen onBack={handleBackToMenu} cases={cases} />}
             {screen === "settings"        && <SettingsScreen onBack={handleBackToMenu} profile={profile} settings={settings} onSettingsChange={setSettings} />}
             {screen === "investigation"   && <InvestigationScreen onVerdictFinal={handleVerdictFinal} onDiscoverFinding={handleDiscoverFinding} />}
             {screen === "notebook"        && <NotebookScreen cases={cases} onUpdateNotes={handleUpdateNotebookNotes} onBack={handleBackToMenu} />}
-            {screen === "profile"         && <ProfileScreen profile={profile} onBack={handleBackToMenu} />}
+            {screen === "profile"         && <ProfileScreen profile={profile} cases={cases} onBack={handleBackToMenu} />}
             {screen === "evidence-wall"   && <EvidenceWallScreen cases={cases} />}
             {screen === "case-resolution" && finalVerdict && activeCase && (
               <CaseResolutionScreen
