@@ -9,13 +9,33 @@ import {
   motion,
 } from "motion/react";
 
-import type { Screen, Tool, Verdict, CaseStatus, DiscoveredFinding, CaseRecord, PlayerProfile, SettingsState } from "./types";
+import type {
+  Screen,
+  Verdict,
+  DiscoveredFinding,
+  CaseRecord,
+  PlayerProfile,
+  SettingsState,
+} from "./types";
+
 import { CASES_CATALOG } from "./data/casesData";
-import { loadCases, saveCases, loadProfile, saveProfile, loadSettings } from "./lib/storage";
+
+import {
+  loadCases,
+  saveCases,
+  loadProfile,
+  loadSettings,
+} from "./lib/storage";
+
 import { CaseContentProvider } from "./context/CaseContentContext";
 
 import { StyleInjector } from "./components/StyleInjector";
-import { Grain, ScanLines, Vignette } from "./components/Atmosphere";
+
+import {
+  Grain,
+  ScanLines,
+  Vignette,
+} from "./components/Atmosphere";
 
 import { BootScreen } from "./pages/BootScreen";
 import { SplashScreen } from "./pages/SplashScreen";
@@ -26,7 +46,12 @@ import { ProfileScreen } from "./pages/ProfileScreen";
 import { MainMenuScreen } from "./pages/MainMenuScreen";
 import { CaseSelectScreen } from "./pages/CaseSelectScreen";
 import { MissionBriefingScreen } from "./pages/MissionBriefingScreen";
+
 import { InvestigationScreen } from "./pages/InvestigationScreen";
+import { Case6Screen } from "./pages/Case6Screen";
+import Case7Screen from "./pages/Case7Screen";
+import Case8Screen from "./pages/Case8Screen";
+
 import { NotebookScreen } from "./pages/NotebookScreen";
 import { EvidenceWallScreen } from "./pages/EvidenceWallScreen";
 import { CaseResolutionScreen } from "./pages/CaseResolutionScreen";
@@ -35,6 +60,21 @@ import { SkillCardsScreen } from "./pages/SkillCardsScreen";
 import { SettingsScreen } from "./pages/SettingsScreen";
 import { computeOverallScore } from "./lib/scoring";
 
+
+/* =========================================================
+   APP SCREEN TYPE
+========================================================= */
+
+type AppScreen =
+  | Screen
+  | "notebook"
+  | "evidence-wall"
+  | "case-resolution";
+
+
+/* =========================================================
+   HEADER NAVIGATION
+========================================================= */
 
 export const SCREENS: {
   id: Screen;
@@ -45,6 +85,7 @@ export const SCREENS: {
     label: "CASE FILE",
   },
 ];
+
 
 /* =========================================================
    PRE-GAME SCREENS
@@ -57,63 +98,147 @@ export const PRE_GAME: Screen[] = ["boot", "splash", "recruitment-letter", "prof
 ========================================================= */
 
 export default function App() {
-  const [screen, setScreen]     = useState<Screen>("boot");
-  const [pendingCaseId, setPendingCaseId] = useState<string | null>(null);
-  const [profile, setProfile] = useState<PlayerProfile | null>(() => loadProfile());
-  const [cases, setCases]     = useState<CaseRecord[]>(loadCases);
-  const [activeCaseId, setActiveCaseId] = useState<string | null>(() => {
-    const stored = loadCases();
-    return stored.find(c => c.status === "in-progress")?.caseId ?? null;
-  });
-  const [finalVerdict, setFinalVerdict] = useState<NonNullable<Verdict> | null>(null);
-  const [resolutionInvestigated, setResolutionInvestigated] = useState<string[]>([]);
-  const [settings, setSettings] = useState<SettingsState>(loadSettings);
+  const [screen, setScreen] =
+    useState<AppScreen>("boot");
 
-  const activeCase = activeCaseId ? cases.find(c => c.caseId === activeCaseId) ?? null : null;
+  const [pendingCaseId, setPendingCaseId] =
+    useState<string | null>(null);
 
-  const updateCase = useCallback((caseId: string, updater: (r: CaseRecord) => CaseRecord) => {
-    setCases(prev => {
-      const next = prev.map(c => c.caseId === caseId ? updater(c) : c);
-      saveCases(next);
-      return next;
+  const [profile, setProfile] =
+    useState<PlayerProfile | null>(
+      () => loadProfile()
+    );
+
+  const [cases, setCases] =
+    useState<CaseRecord[]>(
+      () => loadCases()
+    );
+
+  const [activeCaseId, setActiveCaseId] =
+    useState<string | null>(() => {
+      const storedCases = loadCases();
+
+      return (
+        storedCases.find(
+          (record) =>
+            record.status === "in-progress"
+        )?.caseId ?? null
+      );
     });
-  }, []);
 
-  // Persist lastScreen whenever we switch game screens
+  const [finalVerdict, setFinalVerdict] =
+    useState<NonNullable<Verdict> | null>(
+      null
+    );
+
+  const [
+    resolutionInvestigated,
+    setResolutionInvestigated,
+  ] = useState<string[]>([]);
+
+  const [settings, setSettings] =
+    useState<SettingsState>(
+      () => loadSettings()
+    );
+
+
+  /* =========================================================
+     ACTIVE CASE
+  ========================================================= */
+
+  const activeCase =
+    activeCaseId !== null
+      ? (
+          cases.find(
+            (record) =>
+              record.caseId === activeCaseId
+          ) ?? null
+        )
+      : null;
+
+
+  /* =========================================================
+     NAVIGATION
+  ========================================================= */
+
+  const navigateTo =
+    useCallback(
+      (nextScreen: Screen) => {
+        setScreen(nextScreen);
+      },
+      []
+    );
+
+
+  /* =========================================================
+     UPDATE CASE
+  ========================================================= */
+
+  const updateCase =
+    useCallback(
+      (
+        caseId: string,
+        updater: (
+          record: CaseRecord
+        ) => CaseRecord
+      ) => {
+        setCases((previous) => {
+          const next =
+            previous.map(
+              (record) =>
+                record.caseId === caseId
+                  ? updater(record)
+                  : record
+            );
+
+          saveCases(next);
+
+          return next;
+        });
+      },
+      []
+    );
+
+
+  /* =========================================================
+     SAVE CURRENT INVESTIGATION SCREEN
+  ========================================================= */
+
   useEffect(() => {
-    if (!PRE_GAME.includes(screen) && screen !== "case-resolution" && activeCaseId) {
-      updateCase(activeCaseId, r => ({ ...r, lastScreen: screen }));
+    if (
+      activeCaseId === null
+    ) {
+      return;
     }
-  }, [screen, activeCaseId, updateCase]);
 
-  // Timer — ambient pressure display only; cases now close only via verdict buttons
+    if (
+      screen === "investigation"
+    ) {
+      updateCase(
+        activeCaseId,
+        (record) => ({
+          ...record,
+          lastScreen:
+            "investigation",
+        })
+      );
+    }
+  }, [
+    screen,
+    activeCaseId,
+    updateCase,
+  ]);
+
+
+  /* =========================================================
+     TIMER
+  ========================================================= */
+
   useEffect(() => {
-    if (screen !== "investigation") return;
-    if (!activeCase || activeCase.status !== "in-progress") return;
-    if (activeCase.timeRemainingSec <= 0) return;
-    const t = setInterval(() => {
-      updateCase(activeCase.caseId, r => ({
-        ...r, timeRemainingSec: Math.max(0, r.timeRemainingSec - 1),
-      }));
-    }, 1000);
-    return () => clearInterval(t);
-  }, [screen, activeCaseId]);
-
-  // New players → recruitment letter; returning players → main menu
-  const handleSplashDone = useCallback(() => {
-    setScreen(loadProfile() ? "main-menu" : "recruitment-letter");
-  }, []);
-
-  const handleProfileSave = useCallback((p: PlayerProfile) => {
-    setProfile(p);
-    setScreen("mira-onboarding");
-  }, []);
-
-  const handleCaseSelect = useCallback((caseId: string, resume: boolean) => {
-    setActiveCaseId(caseId);
-    if (!resume) {
-      // Fresh start — reset case state; land directly in investigation
-      updateCase(caseId, r => ({ ...r, status: "in-progress", verdictsGiven: [], wallSelection: null, timeRemainingSec: 847, lastScreen: "investigation" }));
+    if (
+      screen !== "investigation"
+    ) {
+      return;
     }
     const storedScreen = cases.find(c => c.caseId === caseId)?.lastScreen;
     const validResumeScreens = new Set<Screen>(["investigation"]);
@@ -145,104 +270,641 @@ export default function App() {
     });
   }, [activeCaseId]);
 
-  const handleBackToMenu = useCallback(() => setScreen("main-menu"), []);
+    if (
+      activeCase === null
+    ) {
+      return;
+    }
 
-  const handleUpdateNotebookNotes = useCallback((caseId: string, notes: string) => {
-    updateCase(caseId, r => ({ ...r, notebookNotes: notes }));
-  }, [updateCase]);
+    if (
+      activeCase.status !==
+      "in-progress"
+    ) {
+      return;
+    }
 
-  const handleDiscoverFinding = useCallback((finding: DiscoveredFinding) => {
-    if (!activeCaseId) return;
-    updateCase(activeCaseId, r => {
-      const already = (r.discoveredFindings ?? []).some(f => f.elementId === finding.elementId && f.toolId === finding.toolId);
-      if (already) return r;
-      return { ...r, discoveredFindings: [...(r.discoveredFindings ?? []), finding] };
-    });
-  }, [activeCaseId, updateCase]);
+    if (
+      activeCase.timeRemainingSec <= 0
+    ) {
+      return;
+    }
 
-  const isPreGame = PRE_GAME.includes(screen);
-  const isCritical = false; // Cases no longer end via evidence wall — TRUST/VERIFY/REJECT/REPORT closes cases
+    const timer =
+      window.setInterval(() => {
+        updateCase(
+          activeCase.caseId,
+          (record) => ({
+            ...record,
+            timeRemainingSec:
+              Math.max(
+                0,
+                record.timeRemainingSec -
+                  1
+              ),
+          })
+        );
+      }, 1000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [
+    screen,
+    activeCase,
+    updateCase,
+  ]);
+
+
+  /* =========================================================
+     SPLASH
+  ========================================================= */
+
+  const handleSplashDone =
+    useCallback(() => {
+      const existingProfile =
+        loadProfile();
+
+      setScreen(
+        existingProfile
+          ? "main-menu"
+          : "recruitment-letter"
+      );
+    }, []);
+
+
+  /* =========================================================
+     PROFILE
+  ========================================================= */
+
+  const handleProfileSave =
+    useCallback(
+      (
+        player: PlayerProfile
+      ) => {
+        setProfile(player);
+
+        setScreen(
+          "mira-onboarding"
+        );
+      },
+      []
+    );
+
+
+  /* =========================================================
+     CASE SELECT
+  ========================================================= */
+
+  const handleCaseSelect =
+    useCallback(
+      (
+        caseId: string,
+        resume: boolean
+      ) => {
+        setActiveCaseId(
+          caseId
+        );
+
+        if (!resume) {
+          updateCase(
+            caseId,
+            (record) => ({
+              ...record,
+
+              status:
+                "in-progress",
+
+              verdictsGiven: [],
+
+              wallSelection: null,
+
+              timeRemainingSec:
+                847,
+
+              lastScreen:
+                "investigation",
+
+              finalVerdict:
+                null,
+
+              discoveredFindings:
+                [],
+            })
+          );
+        }
+
+        setFinalVerdict(null);
+        setResolutionInvestigated([]);
+
+        setScreen(
+          "investigation"
+        );
+      },
+      [updateCase]
+    );
+
+
+  /* =========================================================
+     FINAL VERDICT
+  ========================================================= */
+
+  const handleVerdictFinal =
+    useCallback(
+      (
+        verdict: NonNullable<Verdict>,
+        investigated: string[]
+      ) => {
+        if (
+          activeCaseId === null
+        ) {
+          return;
+        }
+
+        updateCase(
+          activeCaseId,
+          (record) => ({
+            ...record,
+
+            status:
+              "closed-solved",
+
+            finalVerdict:
+              verdict,
+
+            /*
+             * Keep a valid CaseRecord screen here.
+             * "case-resolution" is managed only by App.
+             */
+            lastScreen:
+              "investigation",
+          })
+        );
+
+        setFinalVerdict(
+          verdict
+        );
+
+        setResolutionInvestigated(
+          investigated
+        );
+
+        setScreen(
+          "case-resolution"
+        );
+      },
+      [
+        activeCaseId,
+        updateCase,
+      ]
+    );
+
+
+  /* =========================================================
+     BACK TO BUREAU
+  ========================================================= */
+
+  const handleBackToBureau =
+    useCallback(() => {
+      const currentCaseId =
+        activeCaseId;
+
+      setFinalVerdict(null);
+      setResolutionInvestigated([]);
+      setScreen("main-menu");
+
+      if (
+        currentCaseId !== null
+      ) {
+        setCases((previous) => {
+          const closedCase =
+            previous.find(
+              (record) =>
+                record.caseId ===
+                  currentCaseId &&
+                record.status ===
+                  "closed-solved"
+            );
+
+          if (closedCase) {
+            setActiveCaseId(
+              null
+            );
+          }
+
+          return previous;
+        });
+      }
+    }, [
+      activeCaseId,
+    ]);
+
+
+  /* =========================================================
+     BACK TO MENU
+  ========================================================= */
+
+  const handleBackToMenu =
+    useCallback(() => {
+      setScreen(
+        "main-menu"
+      );
+    }, []);
+
+
+  /* =========================================================
+     NOTEBOOK
+  ========================================================= */
+
+  const handleUpdateNotebookNotes =
+    useCallback(
+      (
+        caseId: string,
+        notes: string
+      ) => {
+        updateCase(
+          caseId,
+          (record) => ({
+            ...record,
+            notebookNotes:
+              notes,
+          })
+        );
+      },
+      [updateCase]
+    );
+
+
+  /* =========================================================
+     DISCOVER FINDING
+  ========================================================= */
+
+  const handleDiscoverFinding =
+    useCallback(
+      (
+        finding: DiscoveredFinding
+      ) => {
+        if (
+          activeCaseId === null
+        ) {
+          return;
+        }
+
+        updateCase(
+          activeCaseId,
+          (record) => {
+            const existingFindings =
+              record.discoveredFindings ??
+              [];
+
+            const alreadyDiscovered =
+              existingFindings.some(
+                (existing) =>
+                  existing.elementId ===
+                    finding.elementId &&
+                  existing.toolId ===
+                    finding.toolId
+              );
+
+            if (
+              alreadyDiscovered
+            ) {
+              return record;
+            }
+
+            return {
+              ...record,
+
+              discoveredFindings: [
+                ...existingFindings,
+                finding,
+              ],
+            };
+          }
+        );
+      },
+      [
+        activeCaseId,
+        updateCase,
+      ]
+    );
+
+
+  /* =========================================================
+     UI FLAGS
+  ========================================================= */
+
+  const isPreGame =
+    PRE_GAME.includes(screen);
+
+  const isCritical =
+    false;
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
-    <CaseContentProvider caseId={activeCaseId ?? "2024-1147"}>
-    <div
-      className="w-screen h-screen overflow-hidden flex flex-col select-none"
-      style={{ backgroundColor: "#07090f", color: "#c9b882", fontFamily: "Courier Prime, monospace" }}
+    <CaseContentProvider
+      caseId={
+        activeCaseId ??
+        "2024-1147"
+      }
     >
-      <StyleInjector />
-      <Grain />
-      <ScanLines />
-      <Vignette />
+      <div
+        className="
+          w-screen
+          h-screen
+          overflow-hidden
+          flex
+          flex-col
+          select-none
+        "
+        style={{
+          backgroundColor:
+            "#07090f",
+          color:
+            "#c9b882",
+          fontFamily:
+            "Courier Prime, monospace",
+        }}
+      >
+        <StyleInjector />
 
-      {/* In-game header — hidden on splash / menu / stub / resolution / notebook (has its own header) */}
-      {!isPreGame && screen !== "case-resolution" && screen !== "notebook" && (
-        <header
-          className="flex items-center justify-between px-4 py-2 relative flex-shrink-0"
-          style={{ backgroundColor: "rgba(3,5,12,0.97)", borderBottom: "1px solid rgba(201,162,39,0.25)", zIndex: 150 }}
-        >
-          {/* Left: back button + case stamp */}
-          <div className="flex items-center gap-4">
-            {activeCase?.status === "in-progress" ? (
-              <div style={{
-                fontFamily: "Courier Prime, monospace", fontSize: "10px", letterSpacing: "0.18em",
-                color: "rgba(201,162,39,0.28)", border: "1px solid rgba(201,162,39,0.12)",
-                padding: "4px 12px", userSelect: "none",
-              }} title="COMPLETE THE INVESTIGATION TO EXIT">
-                CASE ACTIVE
-              </div>
-            ) : (
-              <button
-                onClick={handleBackToMenu}
-                title={isCritical ? "FINISH OR ABANDON THEORY" : undefined}
+        <Grain />
+        <ScanLines />
+        <Vignette />
+
+
+        {/* =================================================
+            HEADER
+        ================================================= */}
+
+        {!isPreGame &&
+          screen !==
+            "case-resolution" &&
+          screen !==
+            "notebook" &&
+          screen !==
+            "evidence-wall" && (
+
+          <header
+            className="
+              flex
+              items-center
+              justify-between
+              px-4
+              py-2
+              relative
+              flex-shrink-0
+            "
+            style={{
+              backgroundColor:
+                "rgba(3,5,12,0.97)",
+              borderBottom:
+                "1px solid rgba(201,162,39,0.25)",
+              zIndex: 150,
+            }}
+          >
+
+            <div
+              className="
+                flex
+                items-center
+                gap-4
+              "
+            >
+
+              {activeCase?.status ===
+              "in-progress" ? (
+
+                <div
+                  style={{
+                    fontFamily:
+                      "Courier Prime, monospace",
+                    fontSize:
+                      "10px",
+                    letterSpacing:
+                      "0.18em",
+                    color:
+                      "rgba(201,162,39,0.28)",
+                    border:
+                      "1px solid rgba(201,162,39,0.12)",
+                    padding:
+                      "4px 12px",
+                  }}
+                >
+                  CASE ACTIVE
+                </div>
+
+              ) : (
+
+                <button
+                  type="button"
+                  onClick={
+                    handleBackToMenu
+                  }
+                  title={
+                    isCritical
+                      ? "FINISH OR ABANDON CASE"
+                      : undefined
+                  }
+                  disabled={
+                    isCritical
+                  }
+                  style={{
+                    fontFamily:
+                      "Special Elite, serif",
+                    fontSize:
+                      "22px",
+                    letterSpacing:
+                      "0.15em",
+                    color:
+                      isCritical
+                        ? "#3a3428"
+                        : "#c9a227",
+                    border:
+                      `1px solid ${
+                        isCritical
+                          ? "rgba(201,162,39,0.15)"
+                          : "rgba(201,162,39,0.4)"
+                      }`,
+                    background:
+                      "transparent",
+                    padding:
+                      "4px 12px",
+                    cursor:
+                      isCritical
+                        ? "not-allowed"
+                        : "pointer",
+                  }}
+                >
+                  ← BUREAU
+                </button>
+              )}
+
+              <div
                 style={{
-                  fontFamily: "Special Elite, serif", fontSize: "22px", letterSpacing: "0.15em",
-                  color: isCritical ? "#3a3428" : "#c9a227",
-                  border: `1px solid ${isCritical ? "rgba(201,162,39,0.15)" : "rgba(201,162,39,0.4)"}`,
-                  backgroundColor: "transparent", padding: "4px 12px",
-                  cursor: isCritical ? "not-allowed" : "pointer",
-                  transition: "text-shadow 0.2s",
+                  transform:
+                    "rotate(-3.5deg)",
+                  lineHeight:
+                    1,
                 }}
-                onMouseEnter={(e) => { if (!isCritical) (e.currentTarget as HTMLElement).style.textShadow = "0 0 12px rgba(201,162,39,0.7)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.textShadow = "none"; }}
               >
-                ← BUREAU
-              </button>
-            )}
-            <div style={{ transform: "rotate(-3.5deg)", lineHeight: 1 }}>
-              <div className="amber-glow" style={{ fontFamily: "Special Elite, serif", fontSize: "20px", color: "#ffd966", letterSpacing: "0.1em" }}>
-                {activeCaseId ?? "CASE 2024-1147"}
-              </div>
-              <div style={{ fontFamily: "Courier Prime, monospace", fontSize: "9.5px", color: "#b8a878", letterSpacing: "0.22em" }}>
-                {CASES_CATALOG.find(c => c.caseId === activeCaseId)?.title ?? "THE MIRACLE CURE"} · ACTIVE
+
+                <div
+                  className="amber-glow"
+                  style={{
+                    fontFamily:
+                      "Special Elite, serif",
+                    fontSize:
+                      "20px",
+                    color:
+                      "#ffd966",
+                    letterSpacing:
+                      "0.1em",
+                  }}
+                >
+                  {activeCaseId ??
+                    "CASE 2024-1147"}
+                </div>
+
+                <div
+                  style={{
+                    fontFamily:
+                      "Courier Prime, monospace",
+                    fontSize:
+                      "9.5px",
+                    color:
+                      "#b8a878",
+                    letterSpacing:
+                      "0.22em",
+                  }}
+                >
+                  {
+                    CASES_CATALOG.find(
+                      (record) =>
+                        record.caseId ===
+                        activeCaseId
+                    )?.title ??
+                      "THE MIRACLE CURE"
+                  }
+                  {" · ACTIVE"}
+                </div>
+
               </div>
             </div>
-          </div>
 
-          {/* Screen tabs */}
-          <nav className="flex gap-0.5">
-            {SCREENS.map((s) => (
-              <button key={s.id} onClick={() => setScreen(s.id)} style={{
-                fontFamily: "Courier Prime, monospace", fontSize: "9px", letterSpacing: "0.16em", padding: "5px 13px",
-                color: screen === s.id ? "#07090f" : "#c9b882",
-                backgroundColor: screen === s.id ? "#c9a227" : "transparent",
-                border: `1px solid ${screen === s.id ? "#c9a227" : "rgba(201,162,39,0.22)"}`,
-                cursor: "pointer", transition: "all 0.18s",
+
+            <nav
+              className="
+                flex
+                gap-0.5
+              "
+            >
+              {SCREENS.map(
+                (item) => (
+                  <button
+                    type="button"
+                    key={item.id}
+                    onClick={() =>
+                      setScreen(
+                        item.id
+                      )
+                    }
+                    style={{
+                      fontFamily:
+                        "Courier Prime, monospace",
+                      fontSize:
+                        "9px",
+                      letterSpacing:
+                        "0.16em",
+                      padding:
+                        "5px 13px",
+                      color:
+                        screen ===
+                        item.id
+                          ? "#07090f"
+                          : "#c9b882",
+                      backgroundColor:
+                        screen ===
+                        item.id
+                          ? "#c9a227"
+                          : "transparent",
+                      border:
+                        `1px solid ${
+                          screen ===
+                          item.id
+                            ? "#c9a227"
+                            : "rgba(201,162,39,0.22)"
+                        }`,
+                      cursor:
+                        "pointer",
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                )
+              )}
+            </nav>
+
+
+            <div
+              style={{
+                textAlign:
+                  "right",
               }}
-                onMouseEnter={(e) => { if (screen !== s.id) (e.currentTarget as HTMLElement).style.color = "#ffd966"; }}
-                onMouseLeave={(e) => { if (screen !== s.id) (e.currentTarget as HTMLElement).style.color = "#c9b882"; }}
+            >
+              <div
+                className="cyan-flicker"
+                style={{
+                  fontFamily:
+                    "Courier Prime, monospace",
+                  fontSize:
+                    "9px",
+                  color:
+                    "#00e9ff",
+                  letterSpacing:
+                    "0.15em",
+                }}
               >
-                {s.label}
-              </button>
-            ))}
-          </nav>
+                ● ACTIVE INVESTIGATION
+              </div>
 
-          {/* Status right */}
-          <div style={{ textAlign: "right" }}>
-            <div className="cyan-flicker" style={{ fontFamily: "Courier Prime, monospace", fontSize: "9px", color: "#00e9ff", letterSpacing: "0.15em" }}>
-              ● ACTIVE INVESTIGATION
-            </div>
-            <div style={{ fontFamily: "Courier Prime, monospace", fontSize: "9.5px", color: "#b8a878", letterSpacing: "0.12em", marginTop: "2px" }}>
-              {activeCase ? `${Math.floor(activeCase.timeRemainingSec / 60).toString().padStart(2,"0")}:${(activeCase.timeRemainingSec % 60).toString().padStart(2,"0")} · PRECINCT 14` : "02:47:33 · PRECINCT 14"}
+              <div
+                style={{
+                  fontFamily:
+                    "Courier Prime, monospace",
+                  fontSize:
+                    "9.5px",
+                  color:
+                    "#b8a878",
+                  letterSpacing:
+                    "0.12em",
+                  marginTop:
+                    "2px",
+                }}
+              >
+                {activeCase
+                  ? `${Math.floor(
+                      activeCase.timeRemainingSec /
+                        60
+                    )
+                      .toString()
+                      .padStart(
+                        2,
+                        "0"
+                      )}:${(
+                      activeCase.timeRemainingSec %
+                        60
+                    )
+                      .toString()
+                      .padStart(
+                        2,
+                        "0"
+                      )} · PRECINCT 14`
+                  : "02:47:33 · PRECINCT 14"}
+              </div>
             </div>
           </div>
         </header>
