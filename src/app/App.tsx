@@ -240,35 +240,6 @@ export default function App() {
     ) {
       return;
     }
-    const storedScreen = cases.find(c => c.caseId === caseId)?.lastScreen;
-    const validResumeScreens = new Set<Screen>(["investigation"]);
-    const resumeTarget: Screen = (storedScreen && validResumeScreens.has(storedScreen)) ? storedScreen : "investigation";
-    setScreen(resume ? resumeTarget : "investigation");
-  }, [cases, updateCase]);
-
-  const handleVerdictFinal = useCallback((v: NonNullable<Verdict>, investigated: string[]) => {
-    if (!activeCaseId) return;
-    const notes = cases.find(c => c.caseId === activeCaseId)?.notebookNotes ?? "";
-    const score = computeOverallScore(investigated, notes);
-    updateCase(activeCaseId, r => ({
-      ...r, status: "closed-solved", finalVerdict: v, lastScreen: "case-resolution",
-      finalScore: score, completedAt: new Date().toISOString(),
-    }));
-    setFinalVerdict(v);
-    setResolutionInvestigated(investigated);
-    setScreen("case-resolution");
-  }, [activeCaseId, cases, updateCase]);
-
-  const handleBackToBureau = useCallback(() => {
-    setFinalVerdict(null);
-    setScreen("main-menu");
-    // If case is now closed, clear activeCaseId
-    setCases(prev => {
-      const closed = prev.find(c => c.caseId === activeCaseId && c.status === "closed-solved");
-      if (closed) setActiveCaseId(null);
-      return prev;
-    });
-  }, [activeCaseId]);
 
     if (
       activeCase === null
@@ -420,6 +391,10 @@ export default function App() {
           return;
         }
 
+        const notes =
+          cases.find((c) => c.caseId === activeCaseId)?.notebookNotes ?? "";
+        const score = computeOverallScore(investigated, notes);
+
         updateCase(
           activeCaseId,
           (record) => ({
@@ -430,6 +405,9 @@ export default function App() {
 
             finalVerdict:
               verdict,
+
+            finalScore: score,
+            completedAt: new Date().toISOString(),
 
             /*
              * Keep a valid CaseRecord screen here.
@@ -454,6 +432,7 @@ export default function App() {
       },
       [
         activeCaseId,
+        cases,
         updateCase,
       ]
     );
@@ -906,7 +885,6 @@ export default function App() {
                   : "02:47:33 · PRECINCT 14"}
               </div>
             </div>
-          </div>
         </header>
       )}
 
