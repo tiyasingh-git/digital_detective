@@ -56,7 +56,9 @@ import { NotebookScreen } from "./pages/NotebookScreen";
 import { EvidenceWallScreen } from "./pages/EvidenceWallScreen";
 import { CaseResolutionScreen } from "./pages/CaseResolutionScreen";
 import { RecordsScreen } from "./pages/RecordsScreen";
+import { SkillCardsScreen } from "./pages/SkillCardsScreen";
 import { SettingsScreen } from "./pages/SettingsScreen";
+import { computeOverallScore } from "./lib/scoring";
 
 
 /* =========================================================
@@ -89,20 +91,7 @@ export const SCREENS: {
    PRE-GAME SCREENS
 ========================================================= */
 
-export const PRE_GAME: AppScreen[] = [
-  "boot",
-  "splash",
-  "recruitment-letter",
-  "profile-creation",
-  "mira-onboarding",
-  "main-menu",
-  "case-select",
-  "mission-briefing",
-  "records",
-  "settings",
-  "profile",
-];
-
+export const PRE_GAME: Screen[] = ["boot", "splash", "recruitment-letter", "profile-creation", "mira-onboarding", "main-menu", "case-select", "mission-briefing", "records", "skill-cards", "settings", "profile"];
 
 /* =========================================================
    APP
@@ -251,6 +240,35 @@ export default function App() {
     ) {
       return;
     }
+    const storedScreen = cases.find(c => c.caseId === caseId)?.lastScreen;
+    const validResumeScreens = new Set<Screen>(["investigation"]);
+    const resumeTarget: Screen = (storedScreen && validResumeScreens.has(storedScreen)) ? storedScreen : "investigation";
+    setScreen(resume ? resumeTarget : "investigation");
+  }, [cases, updateCase]);
+
+  const handleVerdictFinal = useCallback((v: NonNullable<Verdict>, investigated: string[]) => {
+    if (!activeCaseId) return;
+    const notes = cases.find(c => c.caseId === activeCaseId)?.notebookNotes ?? "";
+    const score = computeOverallScore(investigated, notes);
+    updateCase(activeCaseId, r => ({
+      ...r, status: "closed-solved", finalVerdict: v, lastScreen: "case-resolution",
+      finalScore: score, completedAt: new Date().toISOString(),
+    }));
+    setFinalVerdict(v);
+    setResolutionInvestigated(investigated);
+    setScreen("case-resolution");
+  }, [activeCaseId, cases, updateCase]);
+
+  const handleBackToBureau = useCallback(() => {
+    setFinalVerdict(null);
+    setScreen("main-menu");
+    // If case is now closed, clear activeCaseId
+    setCases(prev => {
+      const closed = prev.find(c => c.caseId === activeCaseId && c.status === "closed-solved");
+      if (closed) setActiveCaseId(null);
+      return prev;
+    });
+  }, [activeCaseId]);
 
     if (
       activeCase === null
@@ -888,450 +906,50 @@ export default function App() {
                   : "02:47:33 · PRECINCT 14"}
               </div>
             </div>
-
-          </header>
-        )}
-
-
-        {/* =================================================
-            MAIN
-        ================================================= */}
-
-        <main
-          className="
-            flex-1
-            overflow-hidden
-            relative
-          "
-          style={{
-            zIndex: 120,
-          }}
-        >
-
-          <AnimatePresence mode="wait">
-
-            <motion.div
-              key={screen}
-              className="
-                absolute
-                inset-0
-              "
-              initial={{
-                opacity: 0,
-              }}
-              animate={{
-                opacity: 1,
-              }}
-              exit={{
-                opacity: 0,
-              }}
-              transition={{
-                duration: 0.28,
-              }}
-            >
-
-              {/* BOOT */}
-
-              {screen ===
-                "boot" && (
-                <BootScreen
-                  onDone={() =>
-                    setScreen(
-                      "splash"
-                    )
-                  }
-                />
-              )}
-
-
-              {/* SPLASH */}
-
-              {screen ===
-                "splash" && (
-                <SplashScreen
-                  onDone={
-                    handleSplashDone
-                  }
-                />
-              )}
-
-
-              {/* RECRUITMENT */}
-
-              {screen ===
-                "recruitment-letter" && (
-                <RecruitmentLetterScreen
-                  onAccept={() =>
-                    setScreen(
-                      "profile-creation"
-                    )
-                  }
-                />
-              )}
-
-
-              {/* PROFILE */}
-
-              {screen ===
-                "profile-creation" && (
-                <ProfileCreationScreen
-                  onSave={
-                    handleProfileSave
-                  }
-                />
-              )}
-
-
-              {/* MIRA */}
-
-              {screen ===
-                "mira-onboarding" && (
-                <MiraOnboardingScreen
-                  onDone={() =>
-                    setScreen(
-                      "main-menu"
-                    )
-                  }
-                />
-              )}
-
-
-              {/* MAIN MENU */}
-
-              {screen ===
-                "main-menu" && (
-                <MainMenuScreen
-                  onNavigate={
-                    navigateTo
-                  }
-                  cases={
-                    cases
-                  }
-                  reduceMotion={
-                    settings.reduceMotion
-                  }
-                  settings={
-                    settings
-                  }
-                  profile={
-                    profile
-                  }
-                />
-              )}
-
-
-              {/* CASE SELECT */}
-
-              {screen ===
-                "case-select" && (
-                <CaseSelectScreen
-                  cases={
-                    cases
-                  }
-                  onSelect={
-                    handleCaseSelect
-                  }
-                  onBrief={(id) => {
-                    setPendingCaseId(
-                      id
-                    );
-
-                    setScreen(
-                      "mission-briefing"
-                    );
-                  }}
-                  onBack={
-                    handleBackToMenu
-                  }
-                />
-              )}
-
-
-              {/* MISSION BRIEFING */}
-
-              {screen ===
-                "mission-briefing" &&
-                pendingCaseId !==
-                  null && (
-                <MissionBriefingScreen
-                  caseId={
-                    pendingCaseId
-                  }
-                  onAccept={() => {
-                    handleCaseSelect(
-                      pendingCaseId,
-                      false
-                    );
-
-                    setPendingCaseId(
-                      null
-                    );
-                  }}
-                  onBack={() => {
-                    setPendingCaseId(
-                      null
-                    );
-
-                    setScreen(
-                      "case-select"
-                    );
-                  }}
-                />
-              )}
-
-
-              {/* RECORDS */}
-
-              {screen ===
-                "records" && (
-                <RecordsScreen
-                  onBack={
-                    handleBackToMenu
-                  }
-                />
-              )}
-
-
-              {/* SETTINGS */}
-
-              {screen ===
-                "settings" && (
-                <SettingsScreen
-                  onBack={
-                    handleBackToMenu
-                  }
-                  profile={
-                    profile
-                  }
-                  settings={
-                    settings
-                  }
-                  onSettingsChange={
-                    setSettings
-                  }
-                />
-              )}
-
-
-              {/* =================================================
-                  CASE 1
-              ================================================= */}
-
-              {screen ===
-                "investigation" &&
-                activeCaseId ===
-                  "2024-1147" && (
-                <InvestigationScreen
-                  onVerdictFinal={
-                    handleVerdictFinal
-                  }
-                  onDiscoverFinding={
-                    handleDiscoverFinding
-                  }
-                />
-              )}
-
-
-              {/* =================================================
-                  CASE 2
-              ================================================= */}
-
-              {screen ===
-                "investigation" &&
-                activeCaseId ===
-                  "2024-0891" && (
-                <InvestigationScreen
-                  onVerdictFinal={
-                    handleVerdictFinal
-                  }
-                  onDiscoverFinding={
-                    handleDiscoverFinding
-                  }
-                />
-              )}
-
-
-              {/* =================================================
-                  CASE 3
-              ================================================= */}
-
-              {screen ===
-                "investigation" &&
-                activeCaseId ===
-                  "2023-1204" && (
-                <InvestigationScreen
-                  onVerdictFinal={
-                    handleVerdictFinal
-                  }
-                  onDiscoverFinding={
-                    handleDiscoverFinding
-                  }
-                />
-              )}
-
-
-              {/* =================================================
-                  CASE 4
-              ================================================= */}
-
-              {screen ===
-                "investigation" &&
-                activeCaseId ===
-                  "2024-1389" && (
-                <InvestigationScreen
-                  onVerdictFinal={
-                    handleVerdictFinal
-                  }
-                  onDiscoverFinding={
-                    handleDiscoverFinding
-                  }
-                />
-              )}
-
-
-              {/* =================================================
-                  CASE 5
-              ================================================= */}
-
-              {screen ===
-                "investigation" &&
-                activeCaseId ===
-                  "2024-1501" && (
-                <InvestigationScreen
-                  onVerdictFinal={
-                    handleVerdictFinal
-                  }
-                  onDiscoverFinding={
-                    handleDiscoverFinding
-                  }
-                />
-              )}
-
-
-              {/* =================================================
-                  CASE 6
-              ================================================= */}
-
-              {screen ===
-                "investigation" &&
-                activeCaseId ===
-                  "2024-1502" && (
-                <Case6Screen
-                  onVerdictFinal={
-                    handleVerdictFinal
-                  }
-                />
-              )}
-
-
-              {/* =================================================
-                  CASE 7
-              ================================================= */}
-
-              {screen ===
-                "investigation" &&
-                activeCaseId ===
-                  "2024-1607" && (
-                <Case7Screen
-                  onVerdictFinal={
-                    handleVerdictFinal
-                  }
-                />
-              )}
-
-
-              {/* =================================================
-                  CASE 8
-              ================================================= */}
-
-              {screen ===
-                "investigation" &&
-                activeCaseId ===
-                  "2024-1708" && (
-                <Case8Screen
-                  onVerdictFinal={
-                    handleVerdictFinal
-                  }
-                />
-              )}
-
-
-              {/* NOTEBOOK */}
-
-              {screen ===
-                "notebook" && (
-                <NotebookScreen
-                  cases={
-                    cases
-                  }
-                  onUpdateNotes={
-                    handleUpdateNotebookNotes
-                  }
-                  onBack={
-                    handleBackToMenu
-                  }
-                />
-              )}
-
-
-              {/* PROFILE */}
-
-              {screen ===
-                "profile" && (
-                <ProfileScreen
-                  profile={
-                    profile
-                  }
-                  onBack={
-                    handleBackToMenu
-                  }
-                />
-              )}
-
-
-              {/* EVIDENCE WALL */}
-
-              {screen ===
-                "evidence-wall" && (
-                <EvidenceWallScreen
-                  cases={
-                    cases
-                  }
-                />
-              )}
-
-
-              {/* CASE RESOLUTION */}
-
-              {screen ===
-                "case-resolution" &&
-                finalVerdict !==
-                  null &&
-                activeCase !==
-                  null && (
-                <CaseResolutionScreen
-                  verdict={
-                    finalVerdict
-                  }
-                  caseRecord={
-                    activeCase
-                  }
-                  investigated={
-                    resolutionInvestigated
-                  }
-                  onReturn={
-                    handleBackToBureau
-                  }
-                />
-              )}
-
-            </motion.div>
-
-          </AnimatePresence>
-
-        </main>
-
-      </div>
+          </div>
+        </header>
+      )}
+
+      {/* Main content */}
+      <main className="flex-1 overflow-hidden relative" style={{ zIndex: 120 }}>
+        <AnimatePresence mode="wait">
+          <motion.div key={screen} className="absolute inset-0"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.28 }}
+          >
+            {screen === "boot"               && <BootScreen onDone={() => setScreen("splash")} />}
+            {screen === "splash"              && <SplashScreen onDone={handleSplashDone} />}
+            {screen === "recruitment-letter" && <RecruitmentLetterScreen onAccept={() => setScreen("profile-creation")} />}
+            {screen === "profile-creation"   && <ProfileCreationScreen onSave={handleProfileSave} />}
+            {screen === "mira-onboarding"    && <MiraOnboardingScreen onDone={() => setScreen("main-menu")} />}
+            {screen === "main-menu"          && <MainMenuScreen onNavigate={setScreen} cases={cases} reduceMotion={settings.reduceMotion} settings={settings} profile={profile} />}
+            {screen === "case-select"     && <CaseSelectScreen cases={cases} onSelect={handleCaseSelect} onBrief={(id) => { setPendingCaseId(id); setScreen("mission-briefing"); }} onBack={handleBackToMenu} />}
+            {screen === "mission-briefing" && pendingCaseId && (
+              <MissionBriefingScreen
+                caseId={pendingCaseId}
+                onAccept={() => { handleCaseSelect(pendingCaseId, false); setPendingCaseId(null); }}
+                onBack={() => { setPendingCaseId(null); setScreen("case-select"); }}
+              />
+            )}
+            {screen === "records"         && <RecordsScreen onBack={handleBackToMenu} cases={cases} />}
+            {screen === "skill-cards"     && <SkillCardsScreen onBack={handleBackToMenu} cases={cases} />}
+            {screen === "settings"        && <SettingsScreen onBack={handleBackToMenu} profile={profile} settings={settings} onSettingsChange={setSettings} />}
+            {screen === "investigation"   && <InvestigationScreen onVerdictFinal={handleVerdictFinal} onDiscoverFinding={handleDiscoverFinding} />}
+            {screen === "notebook"        && <NotebookScreen cases={cases} onUpdateNotes={handleUpdateNotebookNotes} onBack={handleBackToMenu} />}
+            {screen === "profile"         && <ProfileScreen profile={profile} cases={cases} onBack={handleBackToMenu} />}
+            {screen === "evidence-wall"   && <EvidenceWallScreen cases={cases} />}
+            {screen === "case-resolution" && finalVerdict && activeCase && (
+              <CaseResolutionScreen
+                verdict={finalVerdict}
+                caseRecord={activeCase}
+                investigated={resolutionInvestigated}
+                onReturn={handleBackToBureau}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </main>
+    </div>
     </CaseContentProvider>
   );
 }

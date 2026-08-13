@@ -2,8 +2,14 @@ import type { CaseRecord, PlayerProfile, SettingsState } from "../types";
 import { INITIAL_CASES } from "../data/casesData";
 
 export function loadCases(): CaseRecord[] {
-  try { const s = localStorage.getItem("dd_cases"); return s ? JSON.parse(s) : INITIAL_CASES; }
-  catch { return INITIAL_CASES; }
+  try {
+    const s = localStorage.getItem("dd_cases");
+    if (!s) return INITIAL_CASES;
+    const saved: CaseRecord[] = JSON.parse(s);
+    const savedIds = new Set(saved.map(c => c.caseId));
+    const newlyAdded = INITIAL_CASES.filter(c => !savedIds.has(c.caseId));
+    return newlyAdded.length ? [...saved, ...newlyAdded] : saved;
+  } catch { return INITIAL_CASES; }
 }
 
 
