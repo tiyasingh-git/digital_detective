@@ -1,6 +1,6 @@
 // Shared type definitions used across the app.
 
-export type Screen = "boot" | "splash" | "recruitment-letter" | "profile-creation" | "mira-onboarding" | "main-menu" | "case-select" | "mission-briefing" | "investigation" | "notebook" | "evidence-wall" | "case-resolution" | "records" | "skill-cards" | "settings" | "profile";
+export type Screen = "boot" | "splash" | "recruitment-letter" | "profile-creation" | "mira-onboarding" | "main-menu" | "case-select" | "mission-briefing" | "investigation" | "notebook" | "evidence-wall" | "case-resolution" | "records" | "skill-cards" | "settings" | "profile" | "case-resolution" | "final-mission";
 
 
 export type Tool = "scanner" | "timeline" | "camera" | "emotion" | "bias" | "metadata" | "verify" | null;

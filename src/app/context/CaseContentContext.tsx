@@ -9,6 +9,20 @@ import { fetchCaseContent } from "../lib/api";
 import { CASE_CONTENT_FALLBACK } from "../data/caseContentFallback";
 import { getToolResultFrom, type CaseContent } from "../data/caseContent.types";
 
+// Only Case 1 ("2024-1147") has real content authored so far. Other cases in
+// the catalog are placeholders (title/teaser only, no post/evidence data) —
+// until they're written, they borrow Case 1's content rather than crash.
+const DEFAULT_CASE_ID = "2024-1147";
+
+function resolveFallback(caseId: string): CaseContent {
+  const match = CASE_CONTENT_FALLBACK[caseId];
+  if (match) return match;
+  console.warn(
+    `[CaseContentContext] No content authored yet for case ${caseId} — using Case 1 as a placeholder.`,
+  );
+  return CASE_CONTENT_FALLBACK[DEFAULT_CASE_ID];
+}
+
 interface CaseContentState {
   content: CaseContent;
   loading: boolean;
@@ -19,8 +33,7 @@ interface CaseContentState {
 const CaseContentCtx = createContext<CaseContentState | null>(null);
 
 export function CaseContentProvider({ caseId, children }: { caseId: string; children: ReactNode }) {
-  const fallback = CASE_CONTENT_FALLBACK[caseId];
-  const [content, setContent] = useState<CaseContent>(fallback);
+  const [content, setContent] = useState<CaseContent>(() => resolveFallback(caseId));
   const [loading, setLoading] = useState(true);
   const [source, setSource] = useState<"api" | "fallback">("fallback");
 
@@ -39,7 +52,7 @@ export function CaseContentProvider({ caseId, children }: { caseId: string; chil
         console.warn(
           `[CaseContentContext] Falling back to local data for case ${caseId}: ${err.message}`,
         );
-        setContent(CASE_CONTENT_FALLBACK[caseId]);
+        setContent(resolveFallback(caseId));
         setSource("fallback");
       })
       .finally(() => {
