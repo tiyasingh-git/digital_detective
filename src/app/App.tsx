@@ -62,43 +62,6 @@ import { Case6Screen } from "./pages/Case6Screen";
 import Case7Screen from "./pages/Case7Screen";
 import Case8Screen from "./pages/Case8Screen";
 
-// Case 1 uses the generic tools/evidence investigation system (InvestigationScreen +
-// CaseContentContext) — that's the one wired to scoring/Records/Profile. Cases 2-8
-// decision/debrief/quiz flow). Mapped here by caseId so "investigation" routes to
-// the right one. Case 1's ID is intentionally absent — it falls through to InvestigationScreen.
-//
-// NOTE: each screen's own onVerdictFinal signature disagrees with the app's real
-// Verdict type ("TRUST" | "VERIFY" | "REJECT" | "REPORT") — Case2/3/6 send lowercase
-// strings, Case5 sends "verified" (not a valid value at all), Case4 sends a
-// {decision, correct} object instead of a string. Only Case7/Case8 send it correctly.
-// Rather than edit each 1000+ line file's internal logic, normalizeVerdict() below
-// adapts whatever comes in to a real Verdict before it reaches handleVerdictFinal.
-const CASE_SCREEN_MAP: Record<string, ComponentType<any>> = {
-  "2024-0891": Case2Screen,
-  "2023-1204": Case3Screen,
-  "2024-1389": Case4Screen,
-  "2024-1501": Case5Screen,
-  "2024-1502": Case6Screen,
-  "2024-1607": Case7Screen,
-  "2024-1708": Case8Screen,
-};
-
-function normalizeVerdict(raw: unknown): NonNullable<Verdict> {
-  // Case4Screen shape: { decision: string, correct: boolean }
-  if (raw && typeof raw === "object" && "correct" in (raw as Record<string, unknown>)) {
-    return (raw as { correct: boolean }).correct ? "VERIFY" : "REJECT";
-  }
-  if (typeof raw === "string") {
-    const upper = raw.toUpperCase();
-    if (upper === "TRUST" || upper === "VERIFY" || upper === "REJECT" || upper === "REPORT") {
-      return upper as NonNullable<Verdict>;
-    }
-    if (upper === "VERIFIED") return "VERIFY"; // Case5Screen's typo
-  }
-  console.warn(`[App] Unrecognized verdict value from a case screen, defaulting to REJECT:`, raw);
-  return "REJECT";
-}
-
 import { NotebookScreen } from "./pages/NotebookScreen";
 import { EvidenceWallScreen } from "./pages/EvidenceWallScreen";
 import { CaseResolutionScreen } from "./pages/CaseResolutionScreen";
@@ -1382,13 +1345,6 @@ export default function App() {
             </div>
         </header>
       )}
-
-              </div>
-
-            </div>
-
-          </header>
-        )}
 
 
         {/* =====================================================
