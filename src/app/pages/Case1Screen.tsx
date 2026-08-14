@@ -1,5 +1,4 @@
 import { useState } from "react";
-
 import type { Verdict } from "../types";
 
 type Case1ScreenProps = {

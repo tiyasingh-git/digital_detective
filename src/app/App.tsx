@@ -19,7 +19,10 @@ import type {
   SettingsState,
 } from "./types";
 
-import { CASES_CATALOG } from "./data/casesData";
+import {
+  CASES_CATALOG,
+  INITIAL_CASES,
+} from "./data/casesData";
 
 import {
   loadCases,
@@ -49,6 +52,8 @@ import { CaseSelectScreen } from "./pages/CaseSelectScreen";
 import { MissionBriefingScreen } from "./pages/MissionBriefingScreen";
 
 import { InvestigationScreen } from "./pages/InvestigationScreen";
+
+import Case1Screen from "./pages/Case1Screen";
 import Case2Screen from "./pages/Case2Screen";
 import Case3Screen from "./pages/Case3Screen";
 import Case4Screen from "./pages/Case4Screen";
@@ -59,7 +64,6 @@ import Case8Screen from "./pages/Case8Screen";
 
 // Case 1 uses the generic tools/evidence investigation system (InvestigationScreen +
 // CaseContentContext) — that's the one wired to scoring/Records/Profile. Cases 2-8
-// are self-contained bespoke screens Shriya built (their own briefing/evidence/
 // decision/debrief/quiz flow). Mapped here by caseId so "investigation" routes to
 // the right one. Case 1's ID is intentionally absent — it falls through to InvestigationScreen.
 //
@@ -101,6 +105,7 @@ import { CaseResolutionScreen } from "./pages/CaseResolutionScreen";
 import { RecordsScreen } from "./pages/RecordsScreen";
 import { SkillCardsScreen } from "./pages/SkillCardsScreen";
 import { SettingsScreen } from "./pages/SettingsScreen";
+
 import { computeOverallScore } from "./lib/scoring";
 
 
@@ -134,50 +139,288 @@ export const SCREENS: {
    PRE-GAME SCREENS
 ========================================================= */
 
-export const PRE_GAME: Screen[] = ["boot", "splash", "recruitment-letter", "profile-creation", "mira-onboarding", "main-menu", "case-select", "mission-briefing", "records", "skill-cards", "settings", "profile"];
+export const PRE_GAME: AppScreen[] = [
+  "boot",
+  "splash",
+  "recruitment-letter",
+  "profile-creation",
+  "mira-onboarding",
+  "main-menu",
+  "case-select",
+  "mission-briefing",
+  "records",
+  "skill-cards",
+  "settings",
+  "profile",
+];
+
+
+/* =========================================================
+   CASE SCREEN MAP
+========================================================= */
+
+const CASE_SCREEN_MAP: Record<
+  string,
+  ComponentType<any>
+> = {
+  "2024-1147": Case1Screen,
+  "2024-0891": Case2Screen,
+  "2023-1204": Case3Screen,
+  "2024-1389": Case4Screen,
+  "2024-1501": Case5Screen,
+  "2024-1502": Case6Screen,
+  "2024-1607": Case7Screen,
+  "2024-1708": Case8Screen,
+};
+
+
+/* =========================================================
+   VERDICT NORMALIZER
+========================================================= */
+
+function normalizeVerdict(
+  raw: unknown
+): NonNullable<Verdict> {
+
+  /*
+   * Case 4 may return:
+   * {
+   *   decision: string;
+   *   correct: boolean;
+   * }
+   */
+  if (
+    raw !== null &&
+    typeof raw === "object" &&
+    "correct" in
+      (raw as Record<string, unknown>)
+  ) {
+    const correct =
+      (raw as { correct: boolean })
+        .correct;
+
+    return correct
+      ? "VERIFY"
+      : "REJECT";
+  }
+
+
+  if (
+    typeof raw === "string"
+  ) {
+    const upper =
+      raw.toUpperCase();
+
+    if (
+      upper === "TRUST" ||
+      upper === "VERIFY" ||
+      upper === "REJECT" ||
+      upper === "REPORT"
+    ) {
+      return upper as NonNullable<Verdict>;
+    }
+
+    /*
+     * Case 5 previously used "verified".
+     */
+    if (
+      upper === "VERIFIED"
+    ) {
+      return "VERIFY";
+    }
+
+    /*
+     * Some standalone screens may use
+     * a boolean-style verdict.
+     */
+    if (
+      upper === "TRUE"
+    ) {
+      return "VERIFY";
+    }
+
+    if (
+      upper === "FALSE"
+    ) {
+      return "REJECT";
+    }
+  }
+
+
+  console.warn(
+    "[App] Unrecognized verdict value. Defaulting to REJECT:",
+    raw
+  );
+
+  return "REJECT";
+}
+
+
+/* =========================================================
+   MERGE STORED CASES WITH CURRENT CASE CATALOG
+========================================================= */
+
+function getMergedCases(): CaseRecord[] {
+
+  const storedCases =
+    loadCases();
+
+  const storedMap =
+    new Map<string, CaseRecord>();
+
+  storedCases.forEach(
+    (record) => {
+      storedMap.set(
+        record.caseId,
+        record
+      );
+    }
+  );
+
+
+  /*
+   * Start with INITIAL_CASES so newly added
+   * cases are always present.
+   */
+  const mergedCases =
+    INITIAL_CASES.map(
+      (initialCase) =>
+        storedMap.get(
+          initialCase.caseId
+        ) ?? initialCase
+    );
+
+
+  /*
+   * Preserve any additional saved cases
+   * that may exist outside INITIAL_CASES.
+   */
+  storedCases.forEach(
+    (storedCase) => {
+
+      const exists =
+        mergedCases.some(
+          (record) =>
+            record.caseId ===
+            storedCase.caseId
+        );
+
+      if (!exists) {
+        mergedCases.push(
+          storedCase
+        );
+      }
+    }
+  );
+
+
+  return mergedCases;
+}
+
 
 /* =========================================================
    APP
 ========================================================= */
 
 export default function App() {
+
+  /* =======================================================
+     SCREEN
+  ======================================================= */
+
   const [screen, setScreen] =
-    useState<AppScreen>("boot");
+    useState<AppScreen>(
+      "boot"
+    );
+
+
+  /* =======================================================
+     PENDING CASE
+  ======================================================= */
 
   const [pendingCaseId, setPendingCaseId] =
-    useState<string | null>(null);
+    useState<string | null>(
+      null
+    );
+
+
+  /* =======================================================
+     PROFILE
+  ======================================================= */
 
   const [profile, setProfile] =
     useState<PlayerProfile | null>(
       () => loadProfile()
     );
 
+
+  /* =======================================================
+     CASES
+  ======================================================= */
+
   const [cases, setCases] =
     useState<CaseRecord[]>(
-      () => loadCases()
+      () => {
+        const merged =
+          getMergedCases();
+
+        /*
+         * Persist the merged list immediately so
+         * newly added Cases 6–8 become part of
+         * the saved state.
+         */
+        saveCases(merged);
+
+        return merged;
+      }
     );
+
+
+  /* =======================================================
+     ACTIVE CASE
+  ======================================================= */
 
   const [activeCaseId, setActiveCaseId] =
-    useState<string | null>(() => {
-      const storedCases = loadCases();
+    useState<string | null>(
+      () => {
 
-      return (
-        storedCases.find(
-          (record) =>
-            record.status === "in-progress"
-        )?.caseId ?? null
-      );
-    });
+        const merged =
+          getMergedCases();
+
+        return (
+          merged.find(
+            (record) =>
+              record.status ===
+              "in-progress"
+          )?.caseId ?? null
+        );
+      }
+    );
+
+
+  /* =======================================================
+     FINAL VERDICT
+  ======================================================= */
 
   const [finalVerdict, setFinalVerdict] =
-    useState<NonNullable<Verdict> | null>(
-      null
-    );
+    useState<
+      NonNullable<Verdict> | null
+    >(null);
+
+
+  /* =======================================================
+     RESOLUTION EVIDENCE
+  ======================================================= */
 
   const [
     resolutionInvestigated,
     setResolutionInvestigated,
   ] = useState<string[]>([]);
+
+
+  /* =======================================================
+     SETTINGS
+  ======================================================= */
 
   const [settings, setSettings] =
     useState<SettingsState>(
@@ -194,7 +437,8 @@ export default function App() {
       ? (
           cases.find(
             (record) =>
-              record.caseId === activeCaseId
+              record.caseId ===
+              activeCaseId
           ) ?? null
         )
       : null;
@@ -206,8 +450,12 @@ export default function App() {
 
   const navigateTo =
     useCallback(
-      (nextScreen: Screen) => {
-        setScreen(nextScreen);
+      (
+        nextScreen: Screen
+      ) => {
+        setScreen(
+          nextScreen
+        );
       },
       []
     );
@@ -225,19 +473,69 @@ export default function App() {
           record: CaseRecord
         ) => CaseRecord
       ) => {
-        setCases((previous) => {
-          const next =
-            previous.map(
-              (record) =>
-                record.caseId === caseId
-                  ? updater(record)
-                  : record
-            );
 
-          saveCases(next);
+        setCases(
+          (previous) => {
 
-          return next;
-        });
+            const exists =
+              previous.some(
+                (record) =>
+                  record.caseId ===
+                  caseId
+              );
+
+
+            /*
+             * If a case somehow isn't in the
+             * current saved array, recover it
+             * from INITIAL_CASES.
+             */
+            if (!exists) {
+
+              const initialCase =
+                INITIAL_CASES.find(
+                  (record) =>
+                    record.caseId ===
+                    caseId
+                );
+
+              if (
+                initialCase
+              ) {
+
+                const updated =
+                  updater(
+                    initialCase
+                  );
+
+                const next = [
+                  ...previous,
+                  updated,
+                ];
+
+                saveCases(next);
+
+                return next;
+              }
+
+              return previous;
+            }
+
+
+            const next =
+              previous.map(
+                (record) =>
+                  record.caseId ===
+                  caseId
+                    ? updater(record)
+                    : record
+              );
+
+            saveCases(next);
+
+            return next;
+          }
+        );
       },
       []
     );
@@ -248,6 +546,7 @@ export default function App() {
   ========================================================= */
 
   useEffect(() => {
+
     if (
       activeCaseId === null
     ) {
@@ -255,8 +554,10 @@ export default function App() {
     }
 
     if (
-      screen === "investigation"
+      screen ===
+      "investigation"
     ) {
+
       updateCase(
         activeCaseId,
         (record) => ({
@@ -266,6 +567,7 @@ export default function App() {
         })
       );
     }
+
   }, [
     screen,
     activeCaseId,
@@ -278,8 +580,10 @@ export default function App() {
   ========================================================= */
 
   useEffect(() => {
+
     if (
-      screen !== "investigation"
+      screen !==
+      "investigation"
     ) {
       return;
     }
@@ -298,30 +602,42 @@ export default function App() {
     }
 
     if (
-      activeCase.timeRemainingSec <= 0
+      activeCase.timeRemainingSec <=
+      0
     ) {
       return;
     }
 
+
     const timer =
-      window.setInterval(() => {
-        updateCase(
-          activeCase.caseId,
-          (record) => ({
-            ...record,
-            timeRemainingSec:
-              Math.max(
-                0,
-                record.timeRemainingSec -
-                  1
-              ),
-          })
-        );
-      }, 1000);
+      window.setInterval(
+        () => {
+
+          updateCase(
+            activeCase.caseId,
+            (record) => ({
+              ...record,
+
+              timeRemainingSec:
+                Math.max(
+                  0,
+                  record.timeRemainingSec -
+                    1
+                ),
+            })
+          );
+
+        },
+        1000
+      );
+
 
     return () => {
-      window.clearInterval(timer);
+      window.clearInterval(
+        timer
+      );
     };
+
   }, [
     screen,
     activeCase,
@@ -334,16 +650,20 @@ export default function App() {
   ========================================================= */
 
   const handleSplashDone =
-    useCallback(() => {
-      const existingProfile =
-        loadProfile();
+    useCallback(
+      () => {
 
-      setScreen(
-        existingProfile
-          ? "main-menu"
-          : "recruitment-letter"
-      );
-    }, []);
+        const existingProfile =
+          loadProfile();
+
+        setScreen(
+          existingProfile
+            ? "main-menu"
+            : "recruitment-letter"
+        );
+      },
+      []
+    );
 
 
   /* =========================================================
@@ -355,7 +675,10 @@ export default function App() {
       (
         player: PlayerProfile
       ) => {
-        setProfile(player);
+
+        setProfile(
+          player
+        );
 
         setScreen(
           "mira-onboarding"
@@ -373,48 +696,67 @@ export default function App() {
     useCallback(
       (
         caseId: string,
-        resume: boolean
+        _resume: boolean
       ) => {
+
         setActiveCaseId(
           caseId
         );
 
-        if (!resume) {
-          updateCase(
-            caseId,
-            (record) => ({
-              ...record,
+        /*
+         * Starting a new case.
+         */
+        updateCase(
+          caseId,
+          (record) => ({
+            ...record,
 
-              status:
-                "in-progress",
+            status:
+              "in-progress",
 
-              verdictsGiven: [],
+            verdictsGiven:
+              [],
 
-              wallSelection: null,
+            wallSelection:
+              null,
 
-              timeRemainingSec:
-                847,
+            timeRemainingSec:
+              847,
 
-              lastScreen:
-                "investigation",
+            lastScreen:
+              "investigation",
 
-              finalVerdict:
-                null,
+            finalVerdict:
+              null,
 
-              discoveredFindings:
-                [],
-            })
-          );
-        }
+            finalScore:
+              undefined,
 
-        setFinalVerdict(null);
-        setResolutionInvestigated([]);
+            completedAt:
+              undefined,
+
+            discoveredFindings:
+              [],
+          })
+        );
+
+
+        setFinalVerdict(
+          null
+        );
+
+        setResolutionInvestigated(
+          []
+        );
 
         setScreen(
           "investigation"
         );
+
       },
-      [updateCase]
+      [
+        updateCase,
+      ]
     );
 
 
@@ -428,15 +770,35 @@ export default function App() {
         verdict: NonNullable<Verdict>,
         investigated: string[]
       ) => {
+
         if (
-          activeCaseId === null
+          activeCaseId ===
+          null
         ) {
           return;
         }
 
+
+        const currentCase =
+          cases.find(
+            (record) =>
+              record.caseId ===
+              activeCaseId
+          );
+
+
         const notes =
-          cases.find((c) => c.caseId === activeCaseId)?.notebookNotes ?? "";
-        const score = computeOverallScore(investigated, notes);
+          currentCase
+            ?.notebookNotes ??
+          "";
+
+
+        const score =
+          computeOverallScore(
+            investigated,
+            notes
+          );
+
 
         updateCase(
           activeCaseId,
@@ -453,13 +815,14 @@ export default function App() {
             completedAt: new Date().toISOString(),
 
             /*
-             * Keep a valid CaseRecord screen here.
-             * "case-resolution" is managed only by App.
+             * CaseRecord expects a normal
+             * stored screen.
              */
             lastScreen:
               "investigation",
           })
         );
+
 
         setFinalVerdict(
           verdict
@@ -472,6 +835,7 @@ export default function App() {
         setScreen(
           "case-resolution"
         );
+
       },
       [
         activeCaseId,
@@ -486,39 +850,64 @@ export default function App() {
   ========================================================= */
 
   const handleBackToBureau =
-    useCallback(() => {
-      const currentCaseId =
-        activeCaseId;
+    useCallback(
+      () => {
 
-      setFinalVerdict(null);
-      setResolutionInvestigated([]);
-      setScreen("main-menu");
+        const currentCaseId =
+          activeCaseId;
 
-      if (
-        currentCaseId !== null
-      ) {
-        setCases((previous) => {
-          const closedCase =
-            previous.find(
-              (record) =>
-                record.caseId ===
-                  currentCaseId &&
-                record.status ===
-                  "closed-solved"
-            );
 
-          if (closedCase) {
-            setActiveCaseId(
-              null
-            );
-          }
+        setFinalVerdict(
+          null
+        );
 
-          return previous;
-        });
-      }
-    }, [
-      activeCaseId,
-    ]);
+        setResolutionInvestigated(
+          []
+        );
+
+        setScreen(
+          "main-menu"
+        );
+
+
+        if (
+          currentCaseId !==
+          null
+        ) {
+
+          setCases(
+            (previous) => {
+
+              const next =
+                previous.map(
+                  (record) =>
+                    record.caseId ===
+                      currentCaseId &&
+                    record.status ===
+                      "closed-solved"
+                      ? record
+                      : record
+                );
+
+              saveCases(
+                next
+              );
+
+              return next;
+            }
+          );
+
+
+          setActiveCaseId(
+            null
+          );
+        }
+
+      },
+      [
+        activeCaseId,
+      ]
+    );
 
 
   /* =========================================================
@@ -526,11 +915,14 @@ export default function App() {
   ========================================================= */
 
   const handleBackToMenu =
-    useCallback(() => {
-      setScreen(
-        "main-menu"
-      );
-    }, []);
+    useCallback(
+      () => {
+        setScreen(
+          "main-menu"
+        );
+      },
+      []
+    );
 
 
   /* =========================================================
@@ -543,16 +935,21 @@ export default function App() {
         caseId: string,
         notes: string
       ) => {
+
         updateCase(
           caseId,
           (record) => ({
             ...record,
+
             notebookNotes:
               notes,
           })
         );
+
       },
-      [updateCase]
+      [
+        updateCase,
+      ]
     );
 
 
@@ -565,18 +962,23 @@ export default function App() {
       (
         finding: DiscoveredFinding
       ) => {
+
         if (
-          activeCaseId === null
+          activeCaseId ===
+          null
         ) {
           return;
         }
 
+
         updateCase(
           activeCaseId,
           (record) => {
+
             const existingFindings =
               record.discoveredFindings ??
               [];
+
 
             const alreadyDiscovered =
               existingFindings.some(
@@ -587,11 +989,13 @@ export default function App() {
                     finding.toolId
               );
 
+
             if (
               alreadyDiscovered
             ) {
               return record;
             }
+
 
             return {
               ...record,
@@ -603,6 +1007,7 @@ export default function App() {
             };
           }
         );
+
       },
       [
         activeCaseId,
@@ -616,10 +1021,9 @@ export default function App() {
   ========================================================= */
 
   const isPreGame =
-    PRE_GAME.includes(screen);
-
-  const isCritical =
-    false;
+    PRE_GAME.includes(
+      screen
+    );
 
 
   /* =========================================================
@@ -633,6 +1037,7 @@ export default function App() {
         "2024-1147"
       }
     >
+
       <div
         className="
           w-screen
@@ -645,12 +1050,15 @@ export default function App() {
         style={{
           backgroundColor:
             "#07090f",
+
           color:
             "#c9b882",
+
           fontFamily:
             "Courier Prime, monospace",
         }}
       >
+
         <StyleInjector />
 
         <Grain />
@@ -658,9 +1066,9 @@ export default function App() {
         <Vignette />
 
 
-        {/* =================================================
+        {/* =====================================================
             HEADER
-        ================================================= */}
+        ===================================================== */}
 
         {!isPreGame &&
           screen !==
@@ -683,11 +1091,15 @@ export default function App() {
             style={{
               backgroundColor:
                 "rgba(3,5,12,0.97)",
+
               borderBottom:
                 "1px solid rgba(201,162,39,0.25)",
+
               zIndex: 150,
             }}
           >
+
+            {/* LEFT */}
 
             <div
               className="
@@ -704,14 +1116,19 @@ export default function App() {
                   style={{
                     fontFamily:
                       "Courier Prime, monospace",
+
                     fontSize:
                       "10px",
+
                     letterSpacing:
                       "0.18em",
+
                     color:
                       "rgba(201,162,39,0.28)",
+
                     border:
                       "1px solid rgba(201,162,39,0.12)",
+
                     padding:
                       "4px 12px",
                   }}
@@ -726,49 +1143,44 @@ export default function App() {
                   onClick={
                     handleBackToMenu
                   }
-                  title={
-                    isCritical
-                      ? "FINISH OR ABANDON CASE"
-                      : undefined
-                  }
-                  disabled={
-                    isCritical
-                  }
                   style={{
                     fontFamily:
                       "Special Elite, serif",
+
                     fontSize:
                       "22px",
+
                     letterSpacing:
                       "0.15em",
+
                     color:
-                      isCritical
-                        ? "#3a3428"
-                        : "#c9a227",
+                      "#c9a227",
+
                     border:
-                      `1px solid ${
-                        isCritical
-                          ? "rgba(201,162,39,0.15)"
-                          : "rgba(201,162,39,0.4)"
-                      }`,
+                      "1px solid rgba(201,162,39,0.4)",
+
                     background:
                       "transparent",
+
                     padding:
                       "4px 12px",
+
                     cursor:
-                      isCritical
-                        ? "not-allowed"
-                        : "pointer",
+                      "pointer",
                   }}
                 >
                   ← BUREAU
                 </button>
               )}
 
+
+              {/* CASE TITLE */}
+
               <div
                 style={{
                   transform:
                     "rotate(-3.5deg)",
+
                   lineHeight:
                     1,
                 }}
@@ -779,10 +1191,13 @@ export default function App() {
                   style={{
                     fontFamily:
                       "Special Elite, serif",
+
                     fontSize:
                       "20px",
+
                     color:
                       "#ffd966",
+
                     letterSpacing:
                       "0.1em",
                   }}
@@ -791,32 +1206,42 @@ export default function App() {
                     "CASE 2024-1147"}
                 </div>
 
+
                 <div
                   style={{
                     fontFamily:
                       "Courier Prime, monospace",
+
                     fontSize:
                       "9.5px",
+
                     color:
                       "#b8a878",
+
                     letterSpacing:
                       "0.22em",
                   }}
                 >
+
                   {
                     CASES_CATALOG.find(
                       (record) =>
                         record.caseId ===
                         activeCaseId
                     )?.title ??
-                      "THE MIRACLE CURE"
+                    "THE MIRACLE CURE"
                   }
+
                   {" · ACTIVE"}
+
                 </div>
 
               </div>
+
             </div>
 
+
+            {/* NAVIGATION */}
 
             <nav
               className="
@@ -824,11 +1249,15 @@ export default function App() {
                 gap-0.5
               "
             >
+
               {SCREENS.map(
                 (item) => (
+
                   <button
                     type="button"
-                    key={item.id}
+                    key={
+                      item.id
+                    }
                     onClick={() =>
                       setScreen(
                         item.id
@@ -837,22 +1266,28 @@ export default function App() {
                     style={{
                       fontFamily:
                         "Courier Prime, monospace",
+
                       fontSize:
                         "9px",
+
                       letterSpacing:
                         "0.16em",
+
                       padding:
                         "5px 13px",
+
                       color:
                         screen ===
                         item.id
                           ? "#07090f"
                           : "#c9b882",
+
                       backgroundColor:
                         screen ===
                         item.id
                           ? "#c9a227"
                           : "transparent",
+
                       border:
                         `1px solid ${
                           screen ===
@@ -860,16 +1295,23 @@ export default function App() {
                             ? "#c9a227"
                             : "rgba(201,162,39,0.22)"
                         }`,
+
                       cursor:
                         "pointer",
                     }}
                   >
-                    {item.label}
+                    {
+                      item.label
+                    }
                   </button>
+
                 )
               )}
+
             </nav>
 
+
+            {/* STATUS */}
 
             <div
               style={{
@@ -877,15 +1319,19 @@ export default function App() {
                   "right",
               }}
             >
+
               <div
                 className="cyan-flicker"
                 style={{
                   fontFamily:
                     "Courier Prime, monospace",
+
                   fontSize:
                     "9px",
+
                   color:
                     "#00e9ff",
+
                   letterSpacing:
                     "0.15em",
                 }}
@@ -893,20 +1339,26 @@ export default function App() {
                 ● ACTIVE INVESTIGATION
               </div>
 
+
               <div
                 style={{
                   fontFamily:
                     "Courier Prime, monospace",
+
                   fontSize:
                     "9.5px",
+
                   color:
                     "#b8a878",
+
                   letterSpacing:
                     "0.12em",
+
                   marginTop:
                     "2px",
                 }}
               >
+
                 {activeCase
                   ? `${Math.floor(
                       activeCase.timeRemainingSec /
@@ -931,51 +1383,489 @@ export default function App() {
         </header>
       )}
 
-      {/* Main content */}
-      <main className="flex-1 overflow-hidden relative" style={{ zIndex: 120 }}>
-        <AnimatePresence mode="wait">
-          <motion.div key={screen} className="absolute inset-0"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.28 }}
+              </div>
+
+            </div>
+
+          </header>
+        )}
+
+
+        {/* =====================================================
+            MAIN CONTENT
+        ===================================================== */}
+
+        <main
+          className="
+            flex-1
+            overflow-hidden
+            relative
+          "
+          style={{
+            zIndex:
+              120,
+          }}
+        >
+
+          <AnimatePresence
+            mode="wait"
           >
-            {screen === "boot"               && <BootScreen onDone={() => setScreen("splash")} />}
-            {screen === "splash"              && <SplashScreen onDone={handleSplashDone} />}
-            {screen === "recruitment-letter" && <RecruitmentLetterScreen onAccept={() => setScreen("profile-creation")} />}
-            {screen === "profile-creation"   && <ProfileCreationScreen onSave={handleProfileSave} />}
-            {screen === "mira-onboarding"    && <MiraOnboardingScreen onDone={() => setScreen("main-menu")} />}
-            {screen === "main-menu"          && <MainMenuScreen onNavigate={setScreen} cases={cases} reduceMotion={settings.reduceMotion} settings={settings} profile={profile} />}
-            {screen === "case-select"     && <CaseSelectScreen cases={cases} onSelect={handleCaseSelect} onBrief={(id) => { setPendingCaseId(id); setScreen("mission-briefing"); }} onBack={handleBackToMenu} />}
-            {screen === "mission-briefing" && pendingCaseId && (
-              <MissionBriefingScreen
-                caseId={pendingCaseId}
-                onAccept={() => { handleCaseSelect(pendingCaseId, false); setPendingCaseId(null); }}
-                onBack={() => { setPendingCaseId(null); setScreen("case-select"); }}
-              />
-            )}
-            {screen === "records"         && <RecordsScreen onBack={handleBackToMenu} cases={cases} />}
-            {screen === "skill-cards"     && <SkillCardsScreen onBack={handleBackToMenu} cases={cases} />}
-            {screen === "settings"        && <SettingsScreen onBack={handleBackToMenu} profile={profile} settings={settings} onSettingsChange={setSettings} />}
-            {screen === "investigation" && (() => {
-              const CaseScreen = activeCaseId ? CASE_SCREEN_MAP[activeCaseId] : undefined;
-              return CaseScreen
-                ? <CaseScreen onVerdictFinal={(v: unknown, investigated: string[]) => handleVerdictFinal(normalizeVerdict(v), investigated)} />
-                : <InvestigationScreen onVerdictFinal={handleVerdictFinal} onDiscoverFinding={handleDiscoverFinding} />;
-            })()}
-            {screen === "notebook"        && <NotebookScreen cases={cases} onUpdateNotes={handleUpdateNotebookNotes} onBack={handleBackToMenu} />}
-            {screen === "profile"         && <ProfileScreen profile={profile} cases={cases} onBack={handleBackToMenu} />}
-            {screen === "evidence-wall"   && <EvidenceWallScreen cases={cases} />}
-            {screen === "case-resolution" && finalVerdict && activeCase && (
-              <CaseResolutionScreen
-                verdict={finalVerdict}
-                caseRecord={activeCase}
-                investigated={resolutionInvestigated}
-                onReturn={handleBackToBureau}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </main>
-    </div>
+
+            <motion.div
+              key={
+                screen
+              }
+
+              className="
+                absolute
+                inset-0
+              "
+
+              initial={{
+                opacity:
+                  0,
+              }}
+
+              animate={{
+                opacity:
+                  1,
+              }}
+
+              exit={{
+                opacity:
+                  0,
+              }}
+
+              transition={{
+                duration:
+                  0.28,
+              }}
+            >
+
+              {/* =================================================
+                  BOOT
+              ================================================= */}
+
+              {screen ===
+                "boot" && (
+
+                <BootScreen
+                  onDone={() =>
+                    setScreen(
+                      "splash"
+                    )
+                  }
+                />
+
+              )}
+
+
+              {/* =================================================
+                  SPLASH
+              ================================================= */}
+
+              {screen ===
+                "splash" && (
+
+                <SplashScreen
+                  onDone={
+                    handleSplashDone
+                  }
+                />
+
+              )}
+
+
+              {/* =================================================
+                  RECRUITMENT
+              ================================================= */}
+
+              {screen ===
+                "recruitment-letter" && (
+
+                <RecruitmentLetterScreen
+                  onAccept={() =>
+                    setScreen(
+                      "profile-creation"
+                    )
+                  }
+                />
+
+              )}
+
+
+              {/* =================================================
+                  PROFILE CREATION
+              ================================================= */}
+
+              {screen ===
+                "profile-creation" && (
+
+                <ProfileCreationScreen
+                  onSave={
+                    handleProfileSave
+                  }
+                />
+
+              )}
+
+
+              {/* =================================================
+                  MIRA ONBOARDING
+              ================================================= */}
+
+              {screen ===
+                "mira-onboarding" && (
+
+                <MiraOnboardingScreen
+                  onDone={() =>
+                    setScreen(
+                      "main-menu"
+                    )
+                  }
+                />
+
+              )}
+
+
+              {/* =================================================
+                  MAIN MENU
+              ================================================= */}
+
+              {screen ===
+                "main-menu" && (
+
+                <MainMenuScreen
+                  onNavigate={
+                    navigateTo
+                  }
+
+                  cases={
+                    cases
+                  }
+
+                  reduceMotion={
+                    settings.reduceMotion
+                  }
+
+                  settings={
+                    settings
+                  }
+
+                  profile={
+                    profile
+                  }
+                />
+
+              )}
+
+
+              {/* =================================================
+                  CASE SELECT
+              ================================================= */}
+
+              {screen ===
+                "case-select" && (
+
+                <CaseSelectScreen
+                  cases={
+                    cases
+                  }
+
+                  onSelect={
+                    handleCaseSelect
+                  }
+
+                  onBrief={(
+                    caseId
+                  ) => {
+
+                    setPendingCaseId(
+                      caseId
+                    );
+
+                    setScreen(
+                      "mission-briefing"
+                    );
+                  }}
+
+                  onBack={
+                    handleBackToMenu
+                  }
+                />
+
+              )}
+
+
+              {/* =================================================
+                  MISSION BRIEFING
+              ================================================= */}
+
+              {screen ===
+                "mission-briefing" &&
+                pendingCaseId !==
+                  null && (
+
+                <MissionBriefingScreen
+                  caseId={
+                    pendingCaseId
+                  }
+
+                  onAccept={() => {
+
+                    handleCaseSelect(
+                      pendingCaseId,
+                      false
+                    );
+
+                    setPendingCaseId(
+                      null
+                    );
+                  }}
+
+                  onBack={() => {
+
+                    setPendingCaseId(
+                      null
+                    );
+
+                    setScreen(
+                      "case-select"
+                    );
+                  }}
+                />
+
+              )}
+
+
+              {/* =================================================
+                  RECORDS
+              ================================================= */}
+
+              {screen ===
+                "records" && (
+
+                <RecordsScreen
+                  onBack={
+                    handleBackToMenu
+                  }
+
+                  cases={
+                    cases
+                  }
+                />
+
+              )}
+
+
+              {/* =================================================
+                  SKILL CARDS
+              ================================================= */}
+
+              {screen ===
+                "skill-cards" && (
+
+                <SkillCardsScreen
+                  onBack={
+                    handleBackToMenu
+                  }
+
+                  cases={
+                    cases
+                  }
+                />
+
+              )}
+
+
+              {/* =================================================
+                  SETTINGS
+              ================================================= */}
+
+              {screen ===
+                "settings" && (
+
+                <SettingsScreen
+                  onBack={
+                    handleBackToMenu
+                  }
+
+                  profile={
+                    profile
+                  }
+
+                  settings={
+                    settings
+                  }
+
+                  onSettingsChange={
+                    setSettings
+                  }
+                />
+
+              )}
+
+
+              {/* =================================================
+                  CASE INVESTIGATION
+              ================================================= */}
+
+              {screen ===
+                "investigation" && (() => {
+
+                  const CaseScreen =
+                    activeCaseId !==
+                    null
+                      ? CASE_SCREEN_MAP[
+                          activeCaseId
+                        ]
+                      : undefined;
+
+
+                  if (
+                    CaseScreen
+                  ) {
+
+                    return (
+                      <CaseScreen
+                        onVerdictFinal={(
+                          rawVerdict: unknown,
+                          investigated: string[]
+                        ) =>
+                          handleVerdictFinal(
+                            normalizeVerdict(
+                              rawVerdict
+                            ),
+                            investigated
+                          )
+                        }
+                      />
+                    );
+                  }
+
+
+                  /*
+                   * Fallback for any older or
+                   * uncatalogued case.
+                   */
+                  return (
+                    <InvestigationScreen
+                      onVerdictFinal={
+                        handleVerdictFinal
+                      }
+
+                      onDiscoverFinding={
+                        handleDiscoverFinding
+                      }
+                    />
+                  );
+
+                })()}
+
+
+              {/* =================================================
+                  NOTEBOOK
+              ================================================= */}
+
+              {screen ===
+                "notebook" && (
+
+                <NotebookScreen
+                  cases={
+                    cases
+                  }
+
+                  onUpdateNotes={
+                    handleUpdateNotebookNotes
+                  }
+
+                  onBack={
+                    handleBackToMenu
+                  }
+                />
+
+              )}
+
+
+              {/* =================================================
+                  PROFILE
+              ================================================= */}
+
+              {screen ===
+                "profile" && (
+
+                <ProfileScreen
+                  profile={
+                    profile
+                  }
+
+                  cases={
+                    cases
+                  }
+
+                  onBack={
+                    handleBackToMenu
+                  }
+                />
+
+              )}
+
+
+              {/* =================================================
+                  EVIDENCE WALL
+              ================================================= */}
+
+              {screen ===
+                "evidence-wall" && (
+
+                <EvidenceWallScreen
+                  cases={
+                    cases
+                  }
+                />
+
+              )}
+
+
+              {/* =================================================
+                  CASE RESOLUTION
+              ================================================= */}
+
+              {screen ===
+                "case-resolution" &&
+                finalVerdict !==
+                  null &&
+                activeCase !==
+                  null && (
+
+                <CaseResolutionScreen
+                  verdict={
+                    finalVerdict
+                  }
+
+                  caseRecord={
+                    activeCase
+                  }
+
+                  investigated={
+                    resolutionInvestigated
+                  }
+
+                  onReturn={
+                    handleBackToBureau
+                  }
+                />
+
+              )}
+
+            </motion.div>
+
+          </AnimatePresence>
+
+        </main>
+
+      </div>
+
     </CaseContentProvider>
   );
 }
