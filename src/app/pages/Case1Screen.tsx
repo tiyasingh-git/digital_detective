@@ -1,5 +1,4 @@
 import { useState } from "react";
-const [showComments, setShowComments] = useState(false);
 import type { Verdict } from "../types";
 
 type Case1ScreenProps = {
