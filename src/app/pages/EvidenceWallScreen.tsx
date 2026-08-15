@@ -12,7 +12,7 @@ export const WALL_NODE_POSITIONS = [
 ];
 
 
-export function EvidenceWallScreen({ cases }: { cases: CaseRecord[] }) {
+export function EvidenceWallScreen({ cases, onBack }: { cases: CaseRecord[]; onBack?: () => void }) {
   const solvedCases = cases.filter(c => c.status === "closed-solved");
   const activeNodes = solvedCases.map((c, i) => {
     const pos = WALL_NODE_POSITIONS[i % WALL_NODE_POSITIONS.length];
@@ -27,7 +27,20 @@ export function EvidenceWallScreen({ cases }: { cases: CaseRecord[] }) {
   return (
     <div className="flex flex-col h-full" style={{ background: "#060810" }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: "1px solid rgba(201,162,39,0.15)", flexShrink: 0 }}>
+      <div className="flex items-center gap-4 px-4 py-2.5" style={{ borderBottom: "1px solid rgba(201,162,39,0.15)", flexShrink: 0 }}>
+        {onBack && (
+          <button
+            onClick={onBack}
+            style={{
+              fontFamily: "Special Elite, serif", fontSize: "22px", letterSpacing: "0.15em",
+              color: "#c9a227", border: "1px solid rgba(201,162,39,0.4)", backgroundColor: "transparent",
+              padding: "4px 12px", cursor: "pointer", flexShrink: 0,
+            }}
+          >
+            ← BUREAU
+          </button>
+        )}
+        <div className="flex-1 flex items-center justify-between">
         <div>
           <div style={{ fontFamily: "Special Elite, serif", fontSize: "22px", color: "#c9a227", letterSpacing: "0.07em" }}>
             CONSPIRACY BOARD — THE SHADOW NETWORK
@@ -39,6 +52,7 @@ export function EvidenceWallScreen({ cases }: { cases: CaseRecord[] }) {
         <div className="flex flex-col items-end">
           <div style={{ fontFamily: "Courier Prime, monospace", fontSize: "10px", color: "#6b5f42", letterSpacing: "0.1em" }}>STORY PROGRESSION</div>
           <div style={{ fontFamily: "Courier Prime, monospace", fontSize: "9px", color: "#c9a227", letterSpacing: "0.05em" }}>{shadowProgress}% UNCOVERED</div>
+        </div>
         </div>
       </div>
 

@@ -66,8 +66,7 @@ const clueData =
 ========================================================= */
 
 export default function Case5Screen({
-  onVerdictFinal,
-}: Case5ScreenProps) {
+  onVerdictFinal,}: Case5ScreenProps) {
   const [phase, setPhase] = useState<Phase>("intro");
 
   const [selectedTool, setSelectedTool] =

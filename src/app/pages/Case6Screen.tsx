@@ -83,8 +83,7 @@ const CLUES: Clue[] = [
 
 
 export function Case6Screen({
-  onVerdictFinal,
-}: Case6ScreenProps) {
+  onVerdictFinal,}: Case6ScreenProps) {
 
   const [
     section,

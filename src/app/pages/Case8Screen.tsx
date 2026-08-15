@@ -169,8 +169,7 @@ const QUIZ: QuizQuestion[] = [
 
 
 export default function Case8Screen({
-  onVerdictFinal,
-}: Case8ScreenProps) {
+  onVerdictFinal,}: Case8ScreenProps) {
 
   const [activeTool, setActiveTool] =
     useState<ToolId | null>(null);

@@ -83,7 +83,7 @@ export const INITIAL_CASES: CaseRecord[] = [
 
   {
     caseId: "2024-0891",
-    status: "available",
+    status: "locked",
     lastScreen: "main-menu",
     verdictsGiven: [],
     wallSelection: null,
@@ -95,7 +95,7 @@ export const INITIAL_CASES: CaseRecord[] = [
 
   {
     caseId: "2023-1204",
-    status: "available",
+    status: "locked",
     lastScreen: "main-menu",
     verdictsGiven: [],
     wallSelection: null,
@@ -107,7 +107,7 @@ export const INITIAL_CASES: CaseRecord[] = [
 
   {
     caseId: "2024-1389",
-    status: "available",
+    status: "locked",
     lastScreen: "main-menu",
     verdictsGiven: [],
     wallSelection: null,
@@ -119,7 +119,7 @@ export const INITIAL_CASES: CaseRecord[] = [
 
   {
     caseId: "2024-1501",
-    status: "available",
+    status: "locked",
     lastScreen: "main-menu",
     verdictsGiven: [],
     wallSelection: null,
@@ -131,7 +131,7 @@ export const INITIAL_CASES: CaseRecord[] = [
 
   {
     caseId: "2024-1502",
-    status: "available",
+    status: "locked",
     lastScreen: "main-menu",
     verdictsGiven: [],
     wallSelection: null,
@@ -143,7 +143,7 @@ export const INITIAL_CASES: CaseRecord[] = [
 
   {
     caseId: "2024-1607",
-    status: "available",
+    status: "locked",
     lastScreen: "main-menu",
     verdictsGiven: [],
     wallSelection: null,
@@ -155,7 +155,7 @@ export const INITIAL_CASES: CaseRecord[] = [
 
   {
     caseId: "2024-1708",
-    status: "available",
+    status: "locked",
     lastScreen: "main-menu",
     verdictsGiven: [],
     wallSelection: null,

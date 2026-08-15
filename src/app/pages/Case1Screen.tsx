@@ -85,8 +85,7 @@ const VERDICTS: {
 ];
 
 export default function Case1Screen({
-  onVerdictFinal,
-}: Case1ScreenProps) {
+  onVerdictFinal,}: Case1ScreenProps) {
   const [selectedEvidence, setSelectedEvidence] =
     useState<number | null>(null);
 

@@ -35,8 +35,7 @@ interface Case3ScreenProps {
 }
 
 export default function Case3Screen({
-  onVerdictFinal,
-}: Case3ScreenProps) {
+  onVerdictFinal,}: Case3ScreenProps) {
   const [stage, setStage] = useState<Stage>("briefing");
 
   const [selectedTool, setSelectedTool] = useState<string | null>(null);

@@ -36,8 +36,7 @@ type Case4ScreenProps = {
 };
 
 export default function Case4Screen({
-  onVerdictFinal,
-}: Case4ScreenProps) {
+  onVerdictFinal,}: Case4ScreenProps) {
   const [stage, setStage] = useState<Stage>("briefing");
 
   const [selectedTool, setSelectedTool] =

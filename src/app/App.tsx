@@ -840,16 +840,26 @@ export default function App() {
             finalVerdict:
               verdict,
 
-            finalScore:
-              score,
-
-            completedAt:
-              new Date().toISOString(),
+            finalScore: score,
+            completedAt: new Date().toISOString(),
 
             lastScreen:
               "investigation",
           })
         );
+
+        // Unlock the next case in catalog order, if it's still locked
+        const currentIndex = CASES_CATALOG.findIndex(
+          (c) => c.caseId === activeCaseId
+        );
+        const nextCase = currentIndex >= 0 ? CASES_CATALOG[currentIndex + 1] : undefined;
+        if (nextCase) {
+          updateCase(nextCase.caseId, (record) =>
+            record.status === "locked"
+              ? { ...record, status: "available" }
+              : record
+          );
+        }
 
 
         setFinalVerdict(
@@ -1172,69 +1182,39 @@ export default function App() {
               "
             >
 
-              {activeCase?.status ===
-              "in-progress" ? (
+              <button
+                type="button"
+                onClick={
+                  handleBackToMenu
+                }
+                style={{
+                  fontFamily:
+                    "Special Elite, serif",
 
-                <div
-                  style={{
-                    fontFamily:
-                      "Courier Prime, monospace",
+                  fontSize:
+                    "22px",
 
-                    fontSize:
-                      "10px",
+                  letterSpacing:
+                    "0.15em",
 
-                    letterSpacing:
-                      "0.18em",
+                  color:
+                    "#c9a227",
 
-                    color:
-                      "rgba(201,162,39,0.28)",
+                  border:
+                    "1px solid rgba(201,162,39,0.4)",
 
-                    border:
-                      "1px solid rgba(201,162,39,0.12)",
+                  background:
+                    "transparent",
 
-                    padding:
-                      "4px 12px",
-                  }}
-                >
-                  CASE ACTIVE
-                </div>
+                  padding:
+                    "4px 12px",
 
-              ) : (
-
-                <button
-                  type="button"
-                  onClick={
-                    handleBackToMenu
-                  }
-                  style={{
-                    fontFamily:
-                      "Special Elite, serif",
-
-                    fontSize:
-                      "22px",
-
-                    letterSpacing:
-                      "0.15em",
-
-                    color:
-                      "#c9a227",
-
-                    border:
-                      "1px solid rgba(201,162,39,0.4)",
-
-                    background:
-                      "transparent",
-
-                    padding:
-                      "4px 12px",
-
-                    cursor:
-                      "pointer",
-                  }}
-                >
-                  ← BUREAU
-                </button>
-              )}
+                  cursor:
+                    "pointer",
+                }}
+              >
+                ← BUREAU
+              </button>
 
 
               {/* CASE TITLE */}
@@ -1441,13 +1421,10 @@ export default function App() {
                         "0"
                       )} · PRECINCT 14`
                   : "02:47:33 · PRECINCT 14"}
-
               </div>
-
             </div>
-
-          </header>
-        )}
+        </header>
+      )}
 
 
         {/* =====================================================
@@ -1884,6 +1861,7 @@ export default function App() {
                   cases={
                     cases
                   }
+                  onBack={handleBackToMenu}
                 />
 
               )}

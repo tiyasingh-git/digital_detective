@@ -101,8 +101,7 @@ const QUIZ_ANSWERS = [
 ];
 
 export default function Case2Screen({
-  onVerdictFinal,
-}: Case2ScreenProps) {
+  onVerdictFinal,}: Case2ScreenProps) {
   const [phase, setPhase] = useState<Phase>("transition");
   const [selectedClue, setSelectedClue] = useState<string | null>(null);
   const [investigated, setInvestigated] = useState<string[]>([]);

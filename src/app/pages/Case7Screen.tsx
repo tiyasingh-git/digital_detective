@@ -107,8 +107,7 @@ const DECISIONS = [
 
 
 export default function Case7Screen({
-  onVerdictFinal,
-}: Case7ScreenProps) {
+  onVerdictFinal,}: Case7ScreenProps) {
   const [activeTool, setActiveTool] =
     useState<ToolId | null>(null);
 
