@@ -786,6 +786,19 @@ export default function App() {
           })
         );
 
+        // Unlock the next case in catalog order, if it's still locked
+        const currentIndex = CASES_CATALOG.findIndex(
+          (c) => c.caseId === activeCaseId
+        );
+        const nextCase = currentIndex >= 0 ? CASES_CATALOG[currentIndex + 1] : undefined;
+        if (nextCase) {
+          updateCase(nextCase.caseId, (record) =>
+            record.status === "locked"
+              ? { ...record, status: "available" }
+              : record
+          );
+        }
+
 
         setFinalVerdict(
           verdict
