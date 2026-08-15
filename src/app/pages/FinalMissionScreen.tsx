@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 interface FinalMissionScreenProps {
   playerName?: string;
-  onComplete?: () => void;
+  onComplete: () => void;
 }
 
 type MissionPage =
@@ -202,7 +202,7 @@ const CATEGORIES = [
   "Rumor",
 ];
 
-export function FinalMissionScreen({
+export default function FinalMissionScreen({
   playerName = "DIGITAL GUARDIAN",
   onComplete,
 }: FinalMissionScreenProps) {
@@ -440,7 +440,7 @@ function PageShell({
 }: {
   eyebrow: string;
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section
@@ -491,7 +491,7 @@ function ActionButton({
   onClick,
   disabled = false,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   onClick: () => void;
   disabled?: boolean;
 }) {
@@ -529,7 +529,7 @@ function ActionButton({
 function Quote({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div

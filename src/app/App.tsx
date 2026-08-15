@@ -61,6 +61,7 @@ import Case5Screen from "./pages/Case5Screen";
 import { Case6Screen } from "./pages/Case6Screen";
 import Case7Screen from "./pages/Case7Screen";
 import Case8Screen from "./pages/Case8Screen";
+import FinalMissionScreen from "./pages/FinalMissionScreen";
 
 import { NotebookScreen } from "./pages/NotebookScreen";
 import { EvidenceWallScreen } from "./pages/EvidenceWallScreen";
@@ -80,7 +81,8 @@ type AppScreen =
   | Screen
   | "notebook"
   | "evidence-wall"
-  | "case-resolution";
+  | "case-resolution"
+  | "final-mission";
 
 
 /* =========================================================
@@ -193,8 +195,8 @@ function normalizeVerdict(
     }
 
     /*
-     * Some standalone screens may use
-     * a boolean-style verdict.
+     * Defensive support for boolean-like
+     * verdict strings.
      */
     if (
       upper === "TRUE"
@@ -220,7 +222,7 @@ function normalizeVerdict(
 
 
 /* =========================================================
-   MERGE STORED CASES WITH CURRENT CASE CATALOG
+   MERGE STORED CASES WITH CURRENT CASE DATA
 ========================================================= */
 
 function getMergedCases(): CaseRecord[] {
@@ -230,6 +232,7 @@ function getMergedCases(): CaseRecord[] {
 
   const storedMap =
     new Map<string, CaseRecord>();
+
 
   storedCases.forEach(
     (record) => {
@@ -243,7 +246,8 @@ function getMergedCases(): CaseRecord[] {
 
   /*
    * Start with INITIAL_CASES so newly added
-   * cases are always present.
+   * cases are always available even when the
+   * browser has an older localStorage copy.
    */
   const mergedCases =
     INITIAL_CASES.map(
@@ -324,15 +328,18 @@ export default function App() {
   const [cases, setCases] =
     useState<CaseRecord[]>(
       () => {
+
         const merged =
           getMergedCases();
 
         /*
-         * Persist the merged list immediately so
-         * newly added Cases 6–8 become part of
-         * the saved state.
+         * Persist the merged cases so newly
+         * added cases become available in
+         * existing browser sessions.
          */
-        saveCases(merged);
+        saveCases(
+          merged
+        );
 
         return merged;
       }
@@ -391,9 +398,9 @@ export default function App() {
     );
 
 
-  /* =========================================================
+  /* =======================================================
      ACTIVE CASE
-  ========================================================= */
+  ======================================================= */
 
   const activeCase =
     activeCaseId !== null
@@ -407,9 +414,9 @@ export default function App() {
       : null;
 
 
-  /* =========================================================
+  /* =======================================================
      NAVIGATION
-  ========================================================= */
+  ======================================================= */
 
   const navigateTo =
     useCallback(
@@ -424,9 +431,9 @@ export default function App() {
     );
 
 
-  /* =========================================================
+  /* =======================================================
      UPDATE CASE
-  ========================================================= */
+  ======================================================= */
 
   const updateCase =
     useCallback(
@@ -449,9 +456,8 @@ export default function App() {
 
 
             /*
-             * If a case somehow isn't in the
-             * current saved array, recover it
-             * from INITIAL_CASES.
+             * Recover a missing case from
+             * INITIAL_CASES if necessary.
              */
             if (!exists) {
 
@@ -476,7 +482,9 @@ export default function App() {
                   updated,
                 ];
 
-                saveCases(next);
+                saveCases(
+                  next
+                );
 
                 return next;
               }
@@ -490,11 +498,15 @@ export default function App() {
                 (record) =>
                   record.caseId ===
                   caseId
-                    ? updater(record)
+                    ? updater(
+                        record
+                      )
                     : record
               );
 
-            saveCases(next);
+            saveCases(
+              next
+            );
 
             return next;
           }
@@ -504,9 +516,9 @@ export default function App() {
     );
 
 
-  /* =========================================================
+  /* =======================================================
      SAVE CURRENT INVESTIGATION SCREEN
-  ========================================================= */
+  ======================================================= */
 
   useEffect(() => {
 
@@ -525,6 +537,7 @@ export default function App() {
         activeCaseId,
         (record) => ({
           ...record,
+
           lastScreen:
             "investigation",
         })
@@ -538,9 +551,9 @@ export default function App() {
   ]);
 
 
-  /* =========================================================
+  /* =======================================================
      TIMER
-  ========================================================= */
+  ======================================================= */
 
   useEffect(() => {
 
@@ -608,9 +621,9 @@ export default function App() {
   ]);
 
 
-  /* =========================================================
+  /* =======================================================
      SPLASH
-  ========================================================= */
+  ======================================================= */
 
   const handleSplashDone =
     useCallback(
@@ -624,14 +637,15 @@ export default function App() {
             ? "main-menu"
             : "recruitment-letter"
         );
+
       },
       []
     );
 
 
-  /* =========================================================
+  /* =======================================================
      PROFILE
-  ========================================================= */
+  ======================================================= */
 
   const handleProfileSave =
     useCallback(
@@ -646,14 +660,15 @@ export default function App() {
         setScreen(
           "mira-onboarding"
         );
+
       },
       []
     );
 
 
-  /* =========================================================
+  /* =======================================================
      CASE SELECT
-  ========================================================= */
+  ======================================================= */
 
   const handleCaseSelect =
     useCallback(
@@ -666,9 +681,7 @@ export default function App() {
           caseId
         );
 
-        /*
-         * Starting a new case.
-         */
+
         updateCase(
           caseId,
           (record) => ({
@@ -723,9 +736,9 @@ export default function App() {
     );
 
 
-  /* =========================================================
+  /* =======================================================
      FINAL VERDICT
-  ========================================================= */
+  ======================================================= */
 
   const handleVerdictFinal =
     useCallback(
@@ -763,6 +776,59 @@ export default function App() {
           );
 
 
+        /*
+         * Case 8 is the final training case.
+         * It goes directly into Operation Blackout
+         * instead of the normal CaseResolutionScreen.
+         */
+        if (
+          activeCaseId ===
+          "2024-1708"
+        ) {
+
+          updateCase(
+            activeCaseId,
+            (record) => ({
+              ...record,
+
+              status:
+                "closed-solved",
+
+              finalVerdict:
+                verdict,
+
+              finalScore:
+                score,
+
+              completedAt:
+                new Date().toISOString(),
+
+              lastScreen:
+                "investigation",
+            })
+          );
+
+
+          setFinalVerdict(
+            null
+          );
+
+          setResolutionInvestigated(
+            []
+          );
+
+          setScreen(
+            "final-mission"
+          );
+
+          return;
+        }
+
+
+        /*
+         * Normal cases go through the
+         * regular resolution screen.
+         */
         updateCase(
           activeCaseId,
           (record) => ({
@@ -777,10 +843,6 @@ export default function App() {
             finalScore: score,
             completedAt: new Date().toISOString(),
 
-            /*
-             * CaseRecord expects a normal
-             * stored screen.
-             */
             lastScreen:
               "investigation",
           })
@@ -821,9 +883,9 @@ export default function App() {
     );
 
 
-  /* =========================================================
+  /* =======================================================
      BACK TO BUREAU
-  ========================================================= */
+  ======================================================= */
 
   const handleBackToBureau =
     useCallback(
@@ -840,6 +902,7 @@ export default function App() {
         setResolutionInvestigated(
           []
         );
+
 
         setScreen(
           "main-menu"
@@ -886,24 +949,55 @@ export default function App() {
     );
 
 
-  /* =========================================================
-     BACK TO MENU
-  ========================================================= */
+  /* =======================================================
+     FINAL MISSION COMPLETE
+  ======================================================= */
 
-  const handleBackToMenu =
+  const handleFinalMissionComplete =
     useCallback(
       () => {
+
+        setFinalVerdict(
+          null
+        );
+
+        setResolutionInvestigated(
+          []
+        );
+
+        setActiveCaseId(
+          null
+        );
+
         setScreen(
           "main-menu"
         );
+
       },
       []
     );
 
 
-  /* =========================================================
+  /* =======================================================
+     BACK TO MENU
+  ======================================================= */
+
+  const handleBackToMenu =
+    useCallback(
+      () => {
+
+        setScreen(
+          "main-menu"
+        );
+
+      },
+      []
+    );
+
+
+  /* =======================================================
      NOTEBOOK
-  ========================================================= */
+  ======================================================= */
 
   const handleUpdateNotebookNotes =
     useCallback(
@@ -929,9 +1023,9 @@ export default function App() {
     );
 
 
-  /* =========================================================
+  /* =======================================================
      DISCOVER FINDING
-  ========================================================= */
+  ======================================================= */
 
   const handleDiscoverFinding =
     useCallback(
@@ -981,6 +1075,7 @@ export default function App() {
                 finding,
               ],
             };
+
           }
         );
 
@@ -992,9 +1087,9 @@ export default function App() {
     );
 
 
-  /* =========================================================
+  /* =======================================================
      UI FLAGS
-  ========================================================= */
+  ======================================================= */
 
   const isPreGame =
     PRE_GAME.includes(
@@ -1002,9 +1097,9 @@ export default function App() {
     );
 
 
-  /* =========================================================
+  /* =======================================================
      RENDER
-  ========================================================= */
+  ======================================================= */
 
   return (
     <CaseContentProvider
@@ -1052,7 +1147,9 @@ export default function App() {
           screen !==
             "notebook" &&
           screen !==
-            "evidence-wall" && (
+            "evidence-wall" &&
+          screen !==
+            "final-mission" && (
 
           <header
             className="
@@ -1526,6 +1623,7 @@ export default function App() {
                     setScreen(
                       "mission-briefing"
                     );
+
                   }}
 
                   onBack={
@@ -1560,6 +1658,7 @@ export default function App() {
                     setPendingCaseId(
                       null
                     );
+
                   }}
 
                   onBack={() => {
@@ -1571,6 +1670,7 @@ export default function App() {
                     setScreen(
                       "case-select"
                     );
+
                   }}
                 />
 
@@ -1793,6 +1893,22 @@ export default function App() {
 
                   onReturn={
                     handleBackToBureau
+                  }
+                />
+
+              )}
+
+
+              {/* =================================================
+                  FINAL MISSION
+              ================================================= */}
+
+              {screen ===
+                "final-mission" && (
+
+                <FinalMissionScreen
+                  onComplete={
+                    handleFinalMissionComplete
                   }
                 />
 
