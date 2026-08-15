@@ -24,6 +24,7 @@ import type { Verdict } from "../types";
 ========================================================= */
 
 type Case5ScreenProps = {
+  onBack?: () => void;
   onVerdictFinal: (
     verdict: NonNullable<Verdict>,
     investigated: string[]
@@ -67,6 +68,7 @@ const clueData =
 
 export default function Case5Screen({
   onVerdictFinal,
+  onBack,
 }: Case5ScreenProps) {
   const [phase, setPhase] = useState<Phase>("intro");
 
@@ -212,6 +214,27 @@ export default function Case5Screen({
 
   return (
     <div className="w-full h-full overflow-y-auto bg-[#07090f] text-[#c9b882]">
+      {onBack && (
+        <button
+          onClick={onBack}
+          style={{
+            position: "fixed",
+            top: "14px",
+            left: "14px",
+            zIndex: 500,
+            fontFamily: "Courier Prime, monospace",
+            fontSize: "11px",
+            letterSpacing: "0.1em",
+            color: "#c9a227",
+            border: "1px solid rgba(201,162,39,0.4)",
+            backgroundColor: "rgba(7,9,15,0.85)",
+            padding: "6px 14px",
+            cursor: "pointer",
+          }}
+        >
+          ← BUREAU
+        </button>
+      )}
       <div
         className="max-w-6xl mx-auto px-6 py-8"
         style={{

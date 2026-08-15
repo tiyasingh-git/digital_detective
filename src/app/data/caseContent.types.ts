@@ -8,7 +8,6 @@
 // game keeps working unchanged. Once the backend adds a matching endpoint,
 // the fallback is dropped automatically — no frontend changes needed.
 
-import type { ReactNode } from "react";
 import type { Verdict } from "../types";
 
 export interface ToolDef {
@@ -30,56 +29,12 @@ export interface PostElementMeta {
   importance: "HIGH" | "MED" | "LOW";
 }
 
-export interface WitnessEntry {
-  id: number;
-  name: string;
-  time: string;
-  role: string;
-  statement: string;
-}
-
-export interface EvidenceEntry {
-  id: number;
-  label: string;
-  tag: string;
-  auth: number;
-  flagged: boolean;
-}
-
-export interface SuspectEntry {
-  id: number;
-  name: string;
-  role: string;
-  suspicion: number;
-}
-
-export interface TimelineEntry {
-  time: string;
-  event: string;
-  active: boolean;
-}
-
-export interface EvidenceExhibit {
-  type: string;
-  title: string;
-  body: ReactNode;
-  marginNote?: string;
-  mentorNote?: string;
-}
-
 export interface CaseContent {
   caseId: string;
   toolsData: ToolDef[];
   toolFindings: Record<string, Record<string, string>>;
   postElements: PostElement[];
   postElementMeta: Record<string, PostElementMeta>;
-  witnessData: WitnessEntry[];
-  evidenceData: EvidenceEntry[];
-  suspectData: SuspectEntry[];
-  timelineData: TimelineEntry[];
-  suspectNodeIds: number[];
-  correctSuspectId: number;
-  evidenceExhibits: Record<number, EvidenceExhibit>;
   miraMissionIntro: string;
   miraDebriefs: Record<NonNullable<Verdict>, string>;
 }

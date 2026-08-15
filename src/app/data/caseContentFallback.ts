@@ -5,8 +5,6 @@
 
 import {
   TOOLS_DATA, TOOL_FINDINGS, POST_ELEMENTS, POST_ELEMENT_META,
-  WITNESS_DATA, EVIDENCE_DATA, SUSPECT_DATA, TIMELINE_DATA,
-  SUSPECT_NODE_IDS, CORRECT_SUSPECT_ID, EVIDENCE_EXHIBITS,
   MIRA_MISSION_INTRO, MIRA_DEBRIEFS,
 } from "./investigationData";
 import type { CaseContent } from "./caseContent.types";
@@ -18,13 +16,6 @@ export const CASE_CONTENT_FALLBACK: Record<string, CaseContent> = {
     toolFindings: TOOL_FINDINGS,
     postElements: POST_ELEMENTS,
     postElementMeta: POST_ELEMENT_META,
-    witnessData: WITNESS_DATA,
-    evidenceData: EVIDENCE_DATA,
-    suspectData: SUSPECT_DATA,
-    timelineData: TIMELINE_DATA,
-    suspectNodeIds: SUSPECT_NODE_IDS,
-    correctSuspectId: CORRECT_SUSPECT_ID,
-    evidenceExhibits: EVIDENCE_EXHIBITS,
     miraMissionIntro: MIRA_MISSION_INTRO,
     miraDebriefs: MIRA_DEBRIEFS,
   },

@@ -3,6 +3,7 @@ import type { Verdict } from "../types";
 
 
 interface Case7ScreenProps {
+  onBack?: () => void;
   onVerdictFinal: (
     verdict: NonNullable<Verdict>,
     investigated: string[]
@@ -108,6 +109,7 @@ const DECISIONS = [
 
 export default function Case7Screen({
   onVerdictFinal,
+  onBack,
 }: Case7ScreenProps) {
   const [activeTool, setActiveTool] =
     useState<ToolId | null>(null);
@@ -187,6 +189,27 @@ export default function Case7Screen({
         color: "#c9b882",
       }}
     >
+      {onBack && (
+        <button
+          onClick={onBack}
+          style={{
+            position: "fixed",
+            top: "14px",
+            left: "14px",
+            zIndex: 500,
+            fontFamily: "Courier Prime, monospace",
+            fontSize: "11px",
+            letterSpacing: "0.1em",
+            color: "#c9a227",
+            border: "1px solid rgba(201,162,39,0.4)",
+            backgroundColor: "rgba(7,9,15,0.85)",
+            padding: "6px 14px",
+            cursor: "pointer",
+          }}
+        >
+          ← BUREAU
+        </button>
+      )}
       <div className="max-w-6xl mx-auto space-y-8 pb-12">
 
         {/* =================================================

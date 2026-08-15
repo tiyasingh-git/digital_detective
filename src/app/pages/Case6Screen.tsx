@@ -13,6 +13,7 @@ import type {
 
 
 interface Case6ScreenProps {
+  onBack?: () => void;
   onVerdictFinal: (
     verdict: NonNullable<Verdict>,
     investigated: string[]
@@ -84,6 +85,7 @@ const CLUES: Clue[] = [
 
 export function Case6Screen({
   onVerdictFinal,
+  onBack,
 }: Case6ScreenProps) {
 
   const [
@@ -180,6 +182,27 @@ export function Case6Screen({
           "Courier Prime, monospace",
       }}
     >
+      {onBack && (
+        <button
+          onClick={onBack}
+          style={{
+            position: "fixed",
+            top: "14px",
+            left: "14px",
+            zIndex: 500,
+            fontFamily: "Courier Prime, monospace",
+            fontSize: "11px",
+            letterSpacing: "0.1em",
+            color: "#c9a227",
+            border: "1px solid rgba(201,162,39,0.4)",
+            backgroundColor: "rgba(7,9,15,0.85)",
+            padding: "6px 14px",
+            cursor: "pointer",
+          }}
+        >
+          ← BUREAU
+        </button>
+      )}
 
       <div
         className="
