@@ -2,7 +2,6 @@ import { useState } from "react";
 import type { Verdict } from "../types";
 
 type Case1ScreenProps = {
-  onBack?: () => void;
   onVerdictFinal: (
     verdict: NonNullable<Verdict>,
     investigated: string[]
@@ -86,9 +85,7 @@ const VERDICTS: {
 ];
 
 export default function Case1Screen({
-  onVerdictFinal,
-  onBack,
-}: Case1ScreenProps) {
+  onVerdictFinal,}: Case1ScreenProps) {
   const [selectedEvidence, setSelectedEvidence] =
     useState<number | null>(null);
 
@@ -142,27 +139,6 @@ export default function Case1Screen({
         fontFamily: "Courier Prime, monospace",
       }}
     >
-      {onBack && (
-        <button
-          onClick={onBack}
-          style={{
-            position: "fixed",
-            top: "14px",
-            left: "14px",
-            zIndex: 500,
-            fontFamily: "Courier Prime, monospace",
-            fontSize: "11px",
-            letterSpacing: "0.1em",
-            color: "#c9a227",
-            border: "1px solid rgba(201,162,39,0.4)",
-            backgroundColor: "rgba(7,9,15,0.85)",
-            padding: "6px 14px",
-            cursor: "pointer",
-          }}
-        >
-          ← BUREAU
-        </button>
-      )}
       <div
         style={{
           maxWidth: "1400px",

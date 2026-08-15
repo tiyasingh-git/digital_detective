@@ -29,7 +29,6 @@ type Stage =
   | "headquarters";
 
 type Case4ScreenProps = {
-  onBack?: () => void;
   onVerdictFinal?: (
     verdict: any,
     investigated: string[]
@@ -37,9 +36,7 @@ type Case4ScreenProps = {
 };
 
 export default function Case4Screen({
-  onVerdictFinal,
-  onBack,
-}: Case4ScreenProps) {
+  onVerdictFinal,}: Case4ScreenProps) {
   const [stage, setStage] = useState<Stage>("briefing");
 
   const [selectedTool, setSelectedTool] =
@@ -122,27 +119,6 @@ export default function Case4Screen({
 
   return (
     <div className="case4-page">
-      {onBack && (
-        <button
-          onClick={onBack}
-          style={{
-            position: "fixed",
-            top: "14px",
-            left: "14px",
-            zIndex: 500,
-            fontFamily: "Courier Prime, monospace",
-            fontSize: "11px",
-            letterSpacing: "0.1em",
-            color: "#c9a227",
-            border: "1px solid rgba(201,162,39,0.4)",
-            backgroundColor: "rgba(7,9,15,0.85)",
-            padding: "6px 14px",
-            cursor: "pointer",
-          }}
-        >
-          ← BUREAU
-        </button>
-      )}
       <style>{`
         .case4-page {
           min-height: 100%;

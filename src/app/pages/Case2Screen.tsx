@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "motion/react";
 import type { Verdict } from "../types";
 
 interface Case2ScreenProps {
-  onBack?: () => void;
   onVerdictFinal: (
     verdict: NonNullable<Verdict>,
     investigated: string[]
@@ -102,9 +101,7 @@ const QUIZ_ANSWERS = [
 ];
 
 export default function Case2Screen({
-  onVerdictFinal,
-  onBack,
-}: Case2ScreenProps) {
+  onVerdictFinal,}: Case2ScreenProps) {
   const [phase, setPhase] = useState<Phase>("transition");
   const [selectedClue, setSelectedClue] = useState<string | null>(null);
   const [investigated, setInvestigated] = useState<string[]>([]);
@@ -200,27 +197,6 @@ export default function Case2Screen({
 
   return (
     <div style={pageStyle}>
-      {onBack && (
-        <button
-          onClick={onBack}
-          style={{
-            position: "fixed",
-            top: "14px",
-            left: "14px",
-            zIndex: 500,
-            fontFamily: "Courier Prime, monospace",
-            fontSize: "11px",
-            letterSpacing: "0.1em",
-            color: "#c9a227",
-            border: "1px solid rgba(201,162,39,0.4)",
-            backgroundColor: "rgba(7,9,15,0.85)",
-            padding: "6px 14px",
-            cursor: "pointer",
-          }}
-        >
-          ← BUREAU
-        </button>
-      )}
       <AnimatePresence mode="wait">
         {/* =====================================================
             TRANSITION

@@ -1072,69 +1072,39 @@ export default function App() {
               "
             >
 
-              {activeCase?.status ===
-              "in-progress" ? (
+              <button
+                type="button"
+                onClick={
+                  handleBackToMenu
+                }
+                style={{
+                  fontFamily:
+                    "Special Elite, serif",
 
-                <div
-                  style={{
-                    fontFamily:
-                      "Courier Prime, monospace",
+                  fontSize:
+                    "22px",
 
-                    fontSize:
-                      "10px",
+                  letterSpacing:
+                    "0.15em",
 
-                    letterSpacing:
-                      "0.18em",
+                  color:
+                    "#c9a227",
 
-                    color:
-                      "rgba(201,162,39,0.28)",
+                  border:
+                    "1px solid rgba(201,162,39,0.4)",
 
-                    border:
-                      "1px solid rgba(201,162,39,0.12)",
+                  background:
+                    "transparent",
 
-                    padding:
-                      "4px 12px",
-                  }}
-                >
-                  CASE ACTIVE
-                </div>
+                  padding:
+                    "4px 12px",
 
-              ) : (
-
-                <button
-                  type="button"
-                  onClick={
-                    handleBackToMenu
-                  }
-                  style={{
-                    fontFamily:
-                      "Special Elite, serif",
-
-                    fontSize:
-                      "22px",
-
-                    letterSpacing:
-                      "0.15em",
-
-                    color:
-                      "#c9a227",
-
-                    border:
-                      "1px solid rgba(201,162,39,0.4)",
-
-                    background:
-                      "transparent",
-
-                    padding:
-                      "4px 12px",
-
-                    cursor:
-                      "pointer",
-                  }}
-                >
-                  ← BUREAU
-                </button>
-              )}
+                  cursor:
+                    "pointer",
+                }}
+              >
+                ← BUREAU
+              </button>
 
 
               {/* CASE TITLE */}
@@ -1695,7 +1665,6 @@ export default function App() {
                             investigated
                           )
                         }
-                        onBack={handleBackToMenu}
                       />
                     );
                   }
@@ -1779,6 +1748,7 @@ export default function App() {
                   cases={
                     cases
                   }
+                  onBack={handleBackToMenu}
                 />
 
               )}
