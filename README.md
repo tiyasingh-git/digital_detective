@@ -1,6 +1,6 @@
 ﻿# Digital Guardians (Case Zero)
 
-A detective-themed media & information literacy game built for [your MIL hackathon].
+A detective-themed media & information literacy game built for UNESCO MIL hackathon, 2026.
 
 ## Tech stack
 React + TypeScript + Vite + Tailwind
